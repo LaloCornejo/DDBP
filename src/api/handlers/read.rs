@@ -6,10 +6,12 @@ use axum::{
 use sqlx::PgPool;
 use uuid::Uuid;
 use crate::db::models::{Post, Node};
+use tracing::info;
 
 pub async fn get_posts(
     State(pool): State<PgPool>,
 ) -> Json<Vec<Post>> {
+    info!("Fetching posts");
     let posts = sqlx::query_as!(
         Post,
         "SELECT id, content, author, created_at, updated_at, origin_node 
@@ -28,6 +30,7 @@ pub async fn get_post(
     Path(id): Path<Uuid>,
     State(pool): State<PgPool>,
 ) -> Json<Option<Post>> {
+    info!("Fetching post with id: {}", id);
     let post = sqlx::query_as!(
         Post, 
         "SELECT id, content, author, created_at, updated_at, origin_node 
@@ -45,6 +48,7 @@ WHERE id = $1",
 pub async fn get_nodes(
     State(pool): State<PgPool>,
 ) -> Json<Vec<Node>> {
+    info!("Fetching nodes");
     let nodes = sqlx::query_as!(
         Node,
         "SELECT id, url, last_seen FROM nodes"

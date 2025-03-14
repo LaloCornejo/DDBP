@@ -16,6 +16,7 @@ pub async fn create_post(
     State(pool): State<PgPool>,
     Json(request): Json<CreatePostRequest>,
 ) -> Json<Post> {
+    info!("Creating post with content: {} and author: {}", request.content, request.author);
     let config = Config::from_env().unwrap();
 
     let post = Post {
@@ -105,6 +106,7 @@ pub async fn sync_data(
     State(pool): State<PgPool>,
     Json(post): Json<Post>,
 ) -> Json<Post> {
+    info!("Syncing post with ID: {} to local database", post.id);
     sqlx::query!(
         "INSERT INTO posts (id, content, author, created_at, updated_at, origin_node) VALUES ($1, $2, $3, $4, $5, $6)
         ON CONFLICT (id) DO NOTHING",
