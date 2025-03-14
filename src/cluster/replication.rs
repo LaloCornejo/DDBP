@@ -1,7 +1,7 @@
 use reqwest::Client;
 use crate ::db::models::Post;
 
-pub async fn async_post_to_nodes(post: Post, nodes: Vec<String>) {
+pub async fn sync_post_to_nodes(post: Post, nodes: Vec<String>) {
     let client = Client::new();
 
     for node_url in nodes {

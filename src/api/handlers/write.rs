@@ -35,11 +35,11 @@ pub async fn create_post(
         post.updated_at,
         post.origin_node,
     )
-    .execute(&pool)
-    .await
-    .unwrap();
+        .execute(&pool)
+        .await
+        .unwrap();
 
-    tokio::spawn(replication::async_post_to_nodes(post.clone(), config.cluster_nodes));
+    tokio::spawn(replication::sync_post_to_nodes(post.clone(), config.cluster_nodes));
 
     Json(post)
 }
@@ -60,9 +60,9 @@ pub async fn register_node(
         node.url,
         node.last_seen,
     )
-    .execute(&pool)
-    .await
-    .unwrap();
+        .execute(&pool)
+        .await
+        .unwrap();
 
     Json(node)
 }
@@ -81,9 +81,9 @@ pub async fn sync_data(
         post.updated_at,
         post.origin_node,
     )
-    .execute(&pool)
-    .await
-    .unwrap();
+        .execute(&pool)
+        .await
+        .unwrap();
 
     Json(post)
 }

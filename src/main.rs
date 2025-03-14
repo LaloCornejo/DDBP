@@ -3,6 +3,9 @@ mod db;
 mod api;
 mod cluster;
 
+use cluster::discovery::start_discovery_service;
+use crate::db::connection::create_pool;
+
 #[tokio::main]
 async fn main() -> Result<(),  Box<dyn std::error::Error>> {
     // Load env 
@@ -13,12 +16,15 @@ async fn main() -> Result<(),  Box<dyn std::error::Error>> {
 
     // Load config
     let config = config::Config::from_env()?;
+    let db_pool = create_pool(&config).await?;
 
     // Setup db connection
-    let db_pool = db::connect(&config.database_url).await?;
+    //let db_pool = db::connect(&config.database_url).await?;
 
     //Run migrations
     db::run_migrations(&db_pool).await?;
+
+    tokio::spawn(start_discovery_service(config.clone()));
 
     //Start API server
     let app = api::create_router(db_pool);
