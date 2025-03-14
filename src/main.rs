@@ -2,12 +2,15 @@ mod config;
 mod db;
 mod api;
 mod cluster;
+use tracing::info;
+use tracing_subscriber;
 
 use cluster::discovery::start_discovery_service;
 use crate::db::connection::create_pool;
 
 #[tokio::main]
 async fn main() -> Result<(),  Box<dyn std::error::Error>> {
+    info!("Application started");
     // Load env 
     dotenv::dotenv().ok();
 

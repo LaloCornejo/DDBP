@@ -10,6 +10,7 @@ use crate::{
     cluster::replication,
 };
 use chrono::Utc;
+use tracing::info;
 
 pub async fn create_post(
     State(pool): State<PgPool>,
@@ -48,6 +49,36 @@ pub async fn register_node(
     State(pool): State<PgPool>,
     Json(request): Json<Node>,
 ) -> Json<Node> {
+    // Log the incoming request for node registration
+    info!("Registering node with URL: {}", request.url);
+
+    // Check for existing node with the same URL
+    let existing_node = sqlx::query_as!(
+        Node,
+        "SELECT id, url, last_seen FROM nodes WHERE url = $1",
+        request.url
+    )
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
+
+    if let Some(mut node) = existing_node {
+        // Log that a duplicate node was found and update the last_seen timestamp
+        info!("Node with URL: {} already exists with ID: {}. Updating last_seen timestamp.", node.url, node.id);
+
+        node.last_seen = Utc::now();
+        sqlx::query!(
+            "UPDATE nodes SET last_seen = $1 WHERE id = $2",
+            node.last_seen,
+            node.id
+        )
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        return Json(node);
+    }
+
     let node = Node {
         id: Uuid::new_v4().to_string(),
         url: request.url.clone(),
@@ -63,6 +94,9 @@ pub async fn register_node(
         .execute(&pool)
         .await
         .unwrap();
+
+    // Log successful node registration
+    info!("Successfully registered node with ID: {} and URL: {}", node.id, node.url);
 
     Json(node)
 }
