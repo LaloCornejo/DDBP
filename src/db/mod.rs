@@ -1,5 +1,7 @@
-pub mod models;
 pub mod connection;
+pub mod distributed_post;
+pub mod migrations;
+pub mod models;
 
 use sqlx::postgres::PgPool;
 

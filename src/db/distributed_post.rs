@@ -1,5 +1,4 @@
 use sqlx::PgPool;
-use uuid::Uuid;
 use crate::{
     db::models::Post,
     config::Config,
@@ -8,7 +7,7 @@ use futures::future;
 
 pub async fn create_post_across_nodes(
     post: Post,
-    config: &Config,
+    _config: &Config,
     pools: &[PgPool],
 ) -> Result<(), sqlx::Error> {
     let futures = pools.iter().map(|pool| {

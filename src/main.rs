@@ -5,7 +5,6 @@ mod cluster;
 
 use sqlx::PgPool;
 use futures::future;
-use crate::db::distributed_post::create_post_across_nodes;
 use crate::db::migrations;
 
 #[tokio::main]
@@ -36,9 +35,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
 
     tracing::info!("Successfully connected to {} database nodes", all_pools.len());
-
-    // Store the connection pools for future use (optional)
-    // You could store these in a global variable or pass them to your API handlers
 
     // Start API server
     let app = api::create_router(primary_pool);
