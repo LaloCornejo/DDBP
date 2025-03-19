@@ -7,6 +7,7 @@ use axum::{
 };
 use sqlx::PgPool;
 use routes::*;
+use handlers::*;
 
 pub fn create_router(db_pool: PgPool) -> Router {
     Router::new()

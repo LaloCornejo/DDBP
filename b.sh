@@ -27,7 +27,7 @@ for port in "${PORTS[@]}"; do
     HOST=0.0.0.0 \
     PORT=$port \
     NODE_ID=node$port \
-    CLUSTER_NODES=http://localhost:3001,http://localhost:3002,http://localhost:6969 \
+    CLUSTER_NODES=http://localhost:3001,http://localhost:3002,http://localhost:3003 \
     cargo run &
 done
 

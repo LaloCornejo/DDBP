@@ -4,21 +4,31 @@ mod api;
 mod cluster;
 
 use sqlx::PgPool;
+use crate::config::Config;
+use crate::db::run_migrations;
+use crate::db::connection::create_pool;
+use crate::cluster::discovery::start_discovery_service;
 use futures::future;
 use crate::db::migrations;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Load environment variables
+    // Load configuration
+    let config = Config::from_env().unwrap();   // Load environment variables
     dotenv::dotenv().ok();
 
     // Initialize logging
     tracing_subscriber::fmt::init();
 
-    // Load configuration
-    let config = config::Config::from_env()?;
+    // Create connection pool
+    let pool = create_pool(&config).await?;
+    
+    // Run migrations
+    run_migrations(&pool).await?;
 
-    // Setup primary database connection for this node
+    // Start the node discovery service
+    tokio::spawn(start_discovery_service(config.clone()));   // Setup primary database connection for this node
+
     tracing::info!("Connecting to primary database at {}", config.database_url);
     let primary_pool = db::connect(&config.database_url).await?;
 

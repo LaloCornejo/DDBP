@@ -1,13 +1,11 @@
-use axum::{
-    extract::State,
-    Json,
-};
+use axum::extract::State;
+use axum::Json;
 use sqlx::PgPool;
 use uuid::Uuid;
 use crate::{
     db::models::{CreatePostRequest, Post, Node},
     config::Config,
-    cluster::replication,
+    cluster::{replication, node::register_with_node},
 };
 use chrono::Utc;
 use tracing::info;
@@ -37,11 +35,11 @@ pub async fn create_post(
         post.updated_at,
         post.origin_node,
     )
-        .execute(&pool)
-        .await
-        .unwrap();
+    .execute(&pool)
+    .await
+    .unwrap();
 
-    tokio::spawn(replication::sync_post_to_nodes(post.clone(), config.cluster_nodes));
+    tokio::spawn(replication::sync_post_to_nodes(post.clone(), config.cluster_nodes.clone()));
 
     Json(post)
 }
@@ -50,21 +48,18 @@ pub async fn register_node(
     State(pool): State<PgPool>,
     Json(request): Json<Node>,
 ) -> Json<Node> {
-    // Log the incoming request for node registration
     info!("Registering node with URL: {}", request.url);
 
-    // Check for existing node with the same URL
     let existing_node = sqlx::query_as!(
         Node,
         "SELECT id, url, last_seen FROM nodes WHERE url = $1",
         request.url
     )
-        .fetch_optional(&pool)
-        .await
-        .unwrap();
+    .fetch_optional(&pool)
+    .await
+    .unwrap();
 
     if let Some(mut node) = existing_node {
-        // Log that a duplicate node was found and update the last_seen timestamp
         info!("Node with URL: {} already exists with ID: {}. Updating last_seen timestamp.", node.url, node.id);
 
         node.last_seen = Utc::now();
@@ -73,9 +68,9 @@ pub async fn register_node(
             node.last_seen,
             node.id
         )
-            .execute(&pool)
-            .await
-            .unwrap();
+        .execute(&pool)
+        .await
+        .unwrap();
 
         return Json(node);
     }
@@ -92,11 +87,22 @@ pub async fn register_node(
         node.url,
         node.last_seen,
     )
-        .execute(&pool)
-        .await
-        .unwrap();
+    .execute(&pool)
+    .await
+    .unwrap();
 
-    // Log successful node registration
+    // Register with other nodes
+    let config = Config::from_env().unwrap();
+    for node_url in config.cluster_nodes {
+        let node_id = node.id.clone();
+        let node_url_owned = node_url.to_owned();
+        let node_url_owned2 = node_url.to_owned();
+        let node_url2 = node.url.clone();
+        tokio::spawn(async move {
+            register_with_node(&node_id, &node_url2, &node_url_owned).await.unwrap();
+        });
+    }
+
     info!("Successfully registered node with ID: {} and URL: {}", node.id, node.url);
 
     Json(node)
@@ -117,9 +123,9 @@ pub async fn sync_data(
         post.updated_at,
         post.origin_node,
     )
-        .execute(&pool)
-        .await
-        .unwrap();
+    .execute(&pool)
+    .await
+    .unwrap();
 
     Json(post)
 }
