@@ -6,10 +6,15 @@ use tracing::info;
 pub async fn start_discovery_service(config: Config) {
     loop {
         for node_url in &config.cluster_nodes {
-            match register_with_node(&config.node_id, &config.host, &node_url).await {
-                Ok(_) => info!("Successfully registered with node: {}", node_url),
-                Err(err) => info!("Failed to register with node: {}. Error: {:?}", node_url, err),
-            }
+            let node_id = config.node_id.clone();
+            let host = config.host.clone();
+            let node_url = node_url.to_owned();
+            
+            tokio::spawn(async move {
+                if let Err(err) = register_with_node(&node_id, &host, &node_url).await {
+                    info!("Failed to register with node: {}. Error: {:?}", node_url, err);
+                }
+            });
         }
         sleep(Duration::from_secs(60)).await; // Run every 60 seconds
     }

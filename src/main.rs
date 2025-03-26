@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create connection pool
     let pool = create_pool(&config).await?;
-    
+
     // Run migrations
     run_migrations(&pool).await?;
 
@@ -30,6 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(start_discovery_service(config.clone()));   // Setup primary database connection for this node
 
     tracing::info!("Connecting to primary database at {}", config.database_url);
+
     let primary_pool = db::connect(&config.database_url).await?;
 
     // Run migrations on primary database

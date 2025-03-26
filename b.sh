@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Ports to be used for the APIs
-PORTS=(3000 3001 3002 6969)
+PORTS=(3000 3001 3002)
 
 # Function to kill processes running on specified ports
 kill_ports() {

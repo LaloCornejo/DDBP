@@ -95,11 +95,12 @@ pub async fn register_node(
     let config = Config::from_env().unwrap();
     for node_url in config.cluster_nodes {
         let node_id = node.id.clone();
-        let node_url_owned = node_url.to_owned();
-        let node_url_owned2 = node_url.to_owned();
+        let node_url = node_url.to_owned();
         let node_url2 = node.url.clone();
         tokio::spawn(async move {
-            register_with_node(&node_id, &node_url2, &node_url_owned).await.unwrap();
+            if let Err(err) = register_with_node(&node_id, &node_url2, &node_url).await {
+                info!("Failed to register with node: {}. Error: {:?}", node_url, err);
+            }
         });
     }
 
