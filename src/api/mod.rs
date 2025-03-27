@@ -1,3 +1,4 @@
+
 pub mod routes;
 pub mod handlers;
 
@@ -7,8 +8,6 @@ use axum::{
 };
 use sqlx::PgPool;
 use routes::*;
-use handlers::*;
-//use crate::cluster::node::register_with_node;
 
 pub fn create_router(db_pool: PgPool) -> Router {
     Router::new()
@@ -16,9 +15,8 @@ pub fn create_router(db_pool: PgPool) -> Router {
         .route("/posts", get(handlers::read::get_posts))
         .route("/posts", post(handlers::write::create_post))
         .route("/posts/:id", get(handlers::read::get_post))
-        .route("/sync", post(handlers::write::sync_data))
+        .route("/sync", post(handlers::sync::sync_data))
         .route("/nodes", get(handlers::read::get_nodes))
         .route("/nodes", post(handlers::write::register_node))
-        //.route("/register", post(handlers::write::register_with_node))
         .with_state(db_pool)
 }

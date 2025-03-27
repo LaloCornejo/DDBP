@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# Ports to be used for the APIs
-PORTS=(3000 3001 3002)
+# Array of environment files
+ENV_FILES=(.env1 .env2 .env3)
 
 # Function to kill processes running on specified ports
 kill_ports() {
-    for port in "${PORTS[@]}"; do
+    for env_file in "${ENV_FILES[@]}"; do
+        port=$(grep 'PORT=' "$env_file" | cut -d'=' -f2)
         echo "Checking port $port..."
         pid=$(lsof -ti tcp:$port)
         if [ -n "$pid" ]; then
@@ -20,15 +21,10 @@ kill_ports() {
 # Kill processes running on the specified ports
 kill_ports
 
-# Start the API services on the specified ports
-for port in "${PORTS[@]}"; do
-    echo "Starting API server on port $port..."
-    DATABASE_URL=postgres://admin:password@localhost:5432/social_media \
-    HOST=0.0.0.0 \
-    PORT=$port \
-    NODE_ID=node$port \
-    CLUSTER_NODES=http://localhost:3001,http://localhost:3002,http://localhost:3003 \
-    cargo run &
+# Start the API services with the specified environment files
+for env_file in "${ENV_FILES[@]}"; do
+    echo "Starting API server with environment file $env_file..."
+    env $(cat "$env_file" | xargs) cargo run &
 done
 
 # Wait for all background processes to finish

@@ -39,7 +39,7 @@ pub async fn create_post(
     .await
     .unwrap();
 
-    tokio::spawn(replication::sync_post_to_nodes(post.clone(), config.cluster_nodes.clone()));
+    tokio::spawn(replication::sync_post_to_nodes(post.clone(), config.database_urls.clone()));
 
     Json(post)
 }
@@ -93,7 +93,7 @@ pub async fn register_node(
 
     // Register with other nodes
     let config = Config::from_env().unwrap();
-    for node_url in config.cluster_nodes {
+    for node_url in config.database_urls {
         let node_id = node.id.clone();
         let node_url = node_url.to_owned();
         let node_url2 = node.url.clone();

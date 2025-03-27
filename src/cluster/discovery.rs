@@ -5,7 +5,7 @@ use tracing::info;
 
 pub async fn start_discovery_service(config: Config) {
     loop {
-        for node_url in &config.cluster_nodes {
+        for node_url in &config.node_urls {
             let node_id = config.node_id.clone();
             let host = config.host.clone();
             let node_url = node_url.to_owned();
