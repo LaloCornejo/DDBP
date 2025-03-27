@@ -7,7 +7,7 @@ pub struct Config {
     pub port: String,
     pub database_url: String,
     pub database_urls: Vec<String>,
-    pub node_urls: Vec<String>, // Add this for HTTP URLs
+    pub cluster_nodes: Vec<String>,
 }
 
 impl Config {
@@ -21,8 +21,8 @@ impl Config {
             .split(',')
             .map(|s| s.to_string())
             .collect();
-        let node_urls = env::var("NODE_URLS")?
-            .split(',')
+       let cluster_nodes = env::var("CLUSTER_NODES")?
+           .split(',')
             .map(|s| s.to_string())
             .collect();
 
@@ -32,7 +32,7 @@ impl Config {
             port,
             database_url,
             database_urls,
-            node_urls,
+            cluster_nodes,
         })
     }
 }

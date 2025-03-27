@@ -91,42 +91,21 @@ pub async fn register_node(
     .await
     .unwrap();
 
-    // Register with other nodes
-    let config = Config::from_env().unwrap();
-    for node_url in config.database_urls {
-        let node_id = node.id.clone();
-        let node_url = node_url.to_owned();
-        let node_url2 = node.url.clone();
-        tokio::spawn(async move {
-            if let Err(err) = register_with_node(&node_id, &node_url2, &node_url).await {
-                info!("Failed to register with node: {}. Error: {:?}", node_url, err);
-            }
-        });
-    }
-
-    info!("Successfully registered node with ID: {} and URL: {}", node.id, node.url);
-
+    //// Register with other nodes using NODE_URLS
+    //let config = Config::from_env().unwrap();
+    //for node_url in config.node_urls {
+    //    let node_id = node.id.clone();
+    //    let node_url = node_url.to_owned();
+    //    let node_url2 = node.url.clone();
+    //    tokio::spawn(async move {
+    //        if let Err(err) = register_with_node(&node_id, &node_url2, &node_url).await {
+    //            info!("Failed to register with node: {}. Error: {:?}", node_url, err);
+    //        }
+    //    });
+    //}
+    //
+    //info!("Successfully registered node with ID: {} and URL: {}", node.id, node.url);
+    //
     Json(node)
 }
 
-pub async fn sync_data(
-    State(pool): State<PgPool>,
-    Json(post): Json<Post>,
-) -> Json<Post> {
-    info!("Syncing post with ID: {} to local database", post.id);
-    sqlx::query!(
-        "INSERT INTO posts (id, content, author, created_at, updated_at, origin_node) VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (id) DO NOTHING",
-        post.id,
-        post.content,
-        post.author,
-        post.created_at,
-        post.updated_at,
-        post.origin_node,
-    )
-    .execute(&pool)
-    .await
-    .unwrap();
-
-    Json(post)
-}

@@ -1,21 +1,27 @@
 use crate::config::Config;
-use crate::cluster::node::register_with_node;
-use tokio::time::{sleep, Duration};
-use tracing::info;
+//use crate::cluster::node::register_with_node;
+use tokio::time::Duration;
+use reqwest::Client;
+use crate::db::models::Node;
 
-pub async fn start_discovery_service(config: Config) {
+pub async fn start_discovery_service(config: Config){
+    let client = Client::new();
+
+    let self_url = format!("http://{}:{}", config.host, config.port);
+
     loop {
-        for node_url in &config.node_urls {
-            let node_id = config.node_id.clone();
-            let host = config.host.clone();
-            let node_url = node_url.to_owned();
-            
-            tokio::spawn(async move {
-                if let Err(err) = register_with_node(&node_id, &host, &node_url).await {
-                    info!("Failed to register with node: {}. Error: {:?}", node_url, err);
-                }
-            });
+        for node_url in &config.cluster_nodes {
+            let _ = super::node::register_with_node(&config.node_id, &self_url, node_url).await;
+
+            if let Ok(response) = client.get(format!("{}/nodes", node_url))
+                .send()
+                    .await {
+                        if let Ok(nodes) = response.json::<Vec<Node>>().await {
+                            println!("Discovered {} nodes", nodes.len());
+                        }
+                    }
         }
-        sleep(Duration::from_secs(60)).await; // Run every 60 seconds
+
+        tokio::time::sleep(Duration::from_secs(60)).await;
     }
 }

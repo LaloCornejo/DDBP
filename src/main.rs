@@ -8,7 +8,6 @@ use crate::config::Config;
 use crate::db::{run_migrations, connection::create_pool};
 use crate::cluster::discovery::start_discovery_service;
 use futures::future;
-use axum::Server;
 use tracing::info;
 use dotenv::dotenv;
 use std::error::Error;
