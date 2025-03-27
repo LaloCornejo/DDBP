@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Array of environment files
-ENV_FILES=(.env1 .env2 .env3)
+ENV_FILES=(.env .env1 .env2 .env3)
 
 # Function to kill processes running on specified ports
 kill_ports() {

@@ -9,6 +9,7 @@ use crate::{
 };
 use chrono::Utc;
 use tracing::info;
+use crate::cluster::node;
 
 pub async fn create_post(
     State(pool): State<PgPool>,
@@ -35,9 +36,9 @@ pub async fn create_post(
         post.updated_at,
         post.origin_node,
     )
-    .execute(&pool)
-    .await
-    .unwrap();
+        .execute(&pool)
+        .await
+        .unwrap();
 
     tokio::spawn(replication::sync_post_to_nodes(post.clone(), config.database_urls.clone()));
 
@@ -55,9 +56,9 @@ pub async fn register_node(
         "SELECT id, url, last_seen FROM nodes WHERE url = $1",
         request.url
     )
-    .fetch_optional(&pool)
-    .await
-    .unwrap();
+        .fetch_optional(&pool)
+        .await
+        .unwrap();
 
     if let Some(mut node) = existing_node {
         info!("Node with URL: {} already exists with ID: {}. Updating last_seen timestamp.", node.url, node.id);
@@ -68,9 +69,9 @@ pub async fn register_node(
             node.last_seen,
             node.id
         )
-        .execute(&pool)
-        .await
-        .unwrap();
+            .execute(&pool)
+            .await
+            .unwrap();
 
         return Json(node);
     }
@@ -87,25 +88,21 @@ pub async fn register_node(
         node.url,
         node.last_seen,
     )
-    .execute(&pool)
-    .await
-    .unwrap();
+        .execute(&pool)
+        .await
+        .unwrap();
 
-    //// Register with other nodes using NODE_URLS
-    //let config = Config::from_env().unwrap();
-    //for node_url in config.node_urls {
-    //    let node_id = node.id.clone();
-    //    let node_url = node_url.to_owned();
-    //    let node_url2 = node.url.clone();
-    //    tokio::spawn(async move {
-    //        if let Err(err) = register_with_node(&node_id, &node_url2, &node_url).await {
-    //            info!("Failed to register with node: {}. Error: {:?}", node_url, err);
-    //        }
-    //    });
-    //}
-    //
-    //info!("Successfully registered node with ID: {} and URL: {}", node.id, node.url);
-    //
+    // Register with other nodes using NODE_URLS
+    let config = Config::from_env().unwrap();
+    let self_url = format!("http://{}:{}", config.host, config.port);
+
+    for node_url in &config.cluster_nodes {
+        let _ = register_with_node(&config.node_id, &self_url, node_url).await;
+    }
+
+
+    info!("Successfully registered node with ID: {} and URL: {}", node.id, node.url);
+
     Json(node)
 }
 

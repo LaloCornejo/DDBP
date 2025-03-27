@@ -1,5 +1,4 @@
 #!/bin/bash
-# This script sets up a multi-node PostgreSQL cluster using Podman
 
 # Clean up any existing Podman pods that may interfere
 podman pod rm -f $(podman pod ls -q) 2>/dev/null
@@ -28,6 +27,22 @@ EOF
 
 # Number of database nodes to create
 NODE_COUNT=3
+
+# Creaate a central node 
+echo "Starting central database node on port 6969..."
+NODE_NAME="mother-node"
+PORT=6969
+
+podman run -d \
+  --name $NODE_NAME \
+  --network social-media-network \
+  -p $PORT:6969 \
+  -e POSTGRES_USER=admin \
+  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_DB=social_media \
+  -v "$(pwd)/init.sql:/docker-entrypoint-initdb.d/init.sql:Z" \
+  postgres:14
+
 
 # Create and start each node
 for i in $(seq 1 $NODE_COUNT); do
@@ -58,3 +73,4 @@ for i in $(seq 1 $NODE_COUNT); do
   PORT=$((5431 + $i))
   echo "  - $NODE_NAME: postgres://admin:password@localhost:$PORT/social_media"
 done
+  echo "  - CENTRAL NODE: postgres://admin:password@localhost:6969/social_media"
