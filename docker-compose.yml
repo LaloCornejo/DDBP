@@ -1,0 +1,115 @@
+# version: '3'
+
+services:
+  central-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: central
+    volumes:
+      - central-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  fragment1-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: fragment1
+    volumes:
+      - fragment1-db-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  fragment2-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: fragment2
+    volumes:
+      - fragment2-db-data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+
+  fragment3-db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: fragment3
+    volumes:
+      - fragment3-db-data:/var/lib/postgresql/data
+    ports:
+      - "5435:5432"
+
+  central-node:
+    build: .
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@central-db/central
+      NODE_TYPE: central
+      NODE_NAME: central
+      HOST: 0.0.0.0
+      PORT: 8080
+      BASE_URL: http://central-node:8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - central-db
+    restart: unless-stopped
+
+  fragment1:
+    build: .
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@fragment1-db/fragment1
+      NODE_TYPE: fragment
+      NODE_NAME: fragment1
+      HOST: 0.0.0.0
+      PORT: 8080
+      BASE_URL: http://fragment1:8080
+    ports:
+      - "8081:8080"
+    depends_on:
+      - fragment1-db
+      - central-node
+    restart: unless-stopped
+
+  fragment2:
+    build: .
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@fragment2-db/fragment2
+      NODE_TYPE: fragment
+      NODE_NAME: fragment2
+      HOST: 0.0.0.0
+      PORT: 8080
+      BASE_URL: http://fragment2:8080
+    ports:
+      - "8082:8080"
+    depends_on:
+      - fragment2-db
+      - central-node
+    restart: unless-stopped
+
+  fragment3:
+    build: .
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@fragment3-db/fragment3
+      NODE_TYPE: fragment
+      NODE_NAME: fragment3
+      HOST: 0.0.0.0
+      PORT: 8080
+      BASE_URL: http://fragment3:8080
+    ports:
+      - "8083:8080"
+    depends_on:
+      - fragment3-db
+      - central-node
+    restart: unless-stopped
+
+volumes:
+  central-db-data:
+  fragment1-db-data:
+  fragment2-db-data:
+  fragment3-db-data:
