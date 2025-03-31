@@ -1,0 +1,11 @@
+/Users/lalocornejo/Documents/Code/DDBP/social_media_api/target/debug/deps/libubyte-270b5a0edd330698.rmeta: /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/lib.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/arithmetic.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/byte_unit.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/parse.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/ser_de.rs
+
+/Users/lalocornejo/Documents/Code/DDBP/social_media_api/target/debug/deps/libubyte-270b5a0edd330698.rlib: /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/lib.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/arithmetic.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/byte_unit.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/parse.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/ser_de.rs
+
+/Users/lalocornejo/Documents/Code/DDBP/social_media_api/target/debug/deps/ubyte-270b5a0edd330698.d: /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/lib.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/arithmetic.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/byte_unit.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/parse.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/ser_de.rs
+
+/Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/lib.rs:
+/Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/arithmetic.rs:
+/Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/byte_unit.rs:
+/Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/parse.rs:
+/Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ubyte-0.10.4/src/ser_de.rs:
