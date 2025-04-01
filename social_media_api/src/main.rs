@@ -29,16 +29,14 @@ struct AppState {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // Initialize database connection with improved error handling and connection options
-    println!("Starting application...");
-    println!("Connecting to MongoDB replica set...");
+    //println!("Starting application...");
+    //println!("Connecting to MongoDB replica set...");
     
-    // Configure more robust connection settings
     let mut client_options = match ClientOptions::parse(
-        "mongodb://admin:password@localhost:27017,localhost:27018,localhost:27019/?replicaSet=rs0"
+        "mongodb://admin:password@127.0.0.1:27017/?replicaSet=rs0"
     ).await {
         Ok(options) => {
-            println!("Successfully parsed MongoDB connection string");
+            println!("Successfully parsed");
             options
         },
         Err(e) => {
@@ -47,17 +45,15 @@ async fn main() -> std::io::Result<()> {
         }
     };
     
-    // Set timeout values
     client_options.server_selection_timeout = Some(Duration::from_secs(30));
     client_options.connect_timeout = Some(Duration::from_secs(20));
     client_options.retry_writes = Some(true);
     client_options.retry_reads = Some(true);
     client_options.app_name = Some("social-media-app".to_string());
     
-    // Create MongoDB client
     let client = match Client::with_options(client_options) {
         Ok(client) => {
-            println!("Successfully created MongoDB client");
+            println!("Successfully created client");
             client
         },
         Err(e) => {
@@ -66,8 +62,6 @@ async fn main() -> std::io::Result<()> {
         }
     };
 
-    //println!("{:#?}",client);
-    
     // Test connection with a ping to admin database
     println!("Testing MongoDB connection with ping...");
     match client.database("admin").run_command(doc! {"ping": 1}, None).await {
@@ -78,7 +72,6 @@ async fn main() -> std::io::Result<()> {
         }
     };
     
-    // Create database handle
     let db = client.database("social_media_db");
     
     // Check if the social_media_db database is accessible
@@ -103,7 +96,6 @@ async fn main() -> std::io::Result<()> {
             .route("/create_post", web::post().to(create_post_handler))
             .route("/add_media", web::post().to(add_media_handler))
             .route("/get_post/{id}", web::get().to(get_post_handler))
-            // Add health check endpoint
             .route("/health", web::get().to(health_check_handler))
     })
     .bind("127.0.0.1:8000")?

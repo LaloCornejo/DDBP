@@ -1,0 +1,22 @@
+version: '3.1'
+
+services:
+  mongo1:
+    image: mongo
+    container_name: mongo1
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo1-data:/data/db
+
+  mongo2:
+    image: mongo
+    container_name: mongo2
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo2-data:/data/db
+
+volumes:
+  mongo1-data:
+  mongo2-data:

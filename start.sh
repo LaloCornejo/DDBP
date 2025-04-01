@@ -115,4 +115,6 @@ sleep 10
 podman exec -it central-mongodb mongosh --host localhost --port 27017 -u admin -p password --authenticationDatabase admin --eval "rs.status()"
 
 echo "MongoDB replica set setup complete."
-echo "Connection string: mongodb://admin:password@localhost:27017,localhost:27018,localhost:27019/?replicaSet=rs0"
+# echo "Connection string: mongodb://admin:password@localhost:27017,localhost:27018,localhost:27019/?replicaSet=rs0"
+echo "To connect to the MongoDB replica set, use the following connection string:"
+echo "mongodb://admin:password@${central_ip}:27017,${secondary1_ip}:27017,${secondary2_ip}:27017/?replicaSet=rs0"
