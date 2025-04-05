@@ -38,7 +38,7 @@ async fn main() -> std::io::Result<()> {
     info!("Connecting to MongoDB replica set...");
 
     let mut client_options = match ClientOptions::parse(
-        "mongodb://admin:password@10.88.0.13:27017,10.88.0.14:27017,10.88.0.15:27017/?replicaSet=rs0",
+        "mongodb://admin:password@127.0.0.1:27017/?replicaSet=rs0",
     )
     .await
     {

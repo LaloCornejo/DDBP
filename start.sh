@@ -8,7 +8,7 @@ check_container_running() {
     exit 1
   fi
   
-  state=$(podman inspect -f '{{.State.Status}}' $container_name 2>/dev/null)
+  state=$(podman inspect --format '{{.State.Status}}' $container_name 2>/dev/null)
   if [ "$state" != "running" ]; then
     echo "Error: Container $container_name is not running. State: $state"
     echo "Logs for $container_name:"
@@ -31,15 +31,20 @@ echo "Creating MongoDB keyfile..."
 openssl rand -base64 756 > mongo-keyfile
 chmod 600 mongo-keyfile
 
+# Create a custom network
+echo "Creating custom network..."
+podman network create mongo-network || true
+
 # -----------------------------------------------------------
 # Create MongoDB pods and containers
 
 echo "Creating central MongoDB pod and container..."
 # Create a central MongoDB pod
-podman pod create --name central-mongodb -p 27017:27017
+podman pod create --name central-mongodb --network mongo-network -p 27017:27017
 
 # Run a MongoDB container in the central pod with replication enabled
 podman run -d --pod central-mongodb --name central-mongodb \
+  --network mongo-network \
   -e MONGO_INITDB_ROOT_USERNAME=admin \
   -e MONGO_INITDB_ROOT_PASSWORD=password \
   -v $(pwd)/mongo-keyfile:/etc/mongo-keyfile:Z \
@@ -49,10 +54,11 @@ podman run -d --pod central-mongodb --name central-mongodb \
 # ----------------------------------------------------------
 echo "Creating first secondary MongoDB pod and container..."
 # Create the first secondary MongoDB pod
-podman pod create --name secondary-mongodb-1 -p 27018:27017
+podman pod create --name secondary-mongodb-1 --network mongo-network -p 27018:27017
 
 # Run a MongoDB container in the first secondary pod with replication enabled
 podman run -d --pod secondary-mongodb-1 --name secondary-mongodb-1 \
+  --network mongo-network \
   -e MONGO_INITDB_ROOT_USERNAME=admin \
   -e MONGO_INITDB_ROOT_PASSWORD=password \
   -v $(pwd)/mongo-keyfile:/etc/mongo-keyfile:Z \
@@ -61,10 +67,11 @@ podman run -d --pod secondary-mongodb-1 --name secondary-mongodb-1 \
 
 echo "Creating second secondary MongoDB pod and container..."
 # Create the second secondary MongoDB pod
-podman pod create --name secondary-mongodb-2 -p 27019:27017
+podman pod create --name secondary-mongodb-2 --network mongo-network -p 27019:27017
 
 # Run a MongoDB container in the second secondary pod with replication enabled
 podman run -d --pod secondary-mongodb-2 --name secondary-mongodb-2 \
+  --network mongo-network \
   -e MONGO_INITDB_ROOT_USERNAME=admin \
   -e MONGO_INITDB_ROOT_PASSWORD=password \
   -v $(pwd)/mongo-keyfile:/etc/mongo-keyfile:Z \
@@ -84,9 +91,32 @@ check_container_running secondary-mongodb-2
 
 # Get IP addresses of the pods
 echo "Getting container IP addresses..."
-central_ip=$(podman inspect -f '{{.NetworkSettings.Networks.podman.IPAddress}}' central-mongodb)
-secondary1_ip=$(podman inspect -f '{{.NetworkSettings.Networks.podman.IPAddress}}' secondary-mongodb-1)
-secondary2_ip=$(podman inspect -f '{{.NetworkSettings.Networks.podman.IPAddress}}' secondary-mongodb-2)
+# Fixed the inspect syntax - using --format instead of -f and getting IP from correct location
+central_ip=$(podman inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' central-mongodb)
+secondary1_ip=$(podman inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' secondary-mongodb-1)
+secondary2_ip=$(podman inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' secondary-mongodb-2)
+
+# Fallback to pod IP if container IP is empty
+if [ -z "$central_ip" ]; then
+  central_ip=$(podman pod inspect --format '{{.NetworkSettings.IPs}}' central-mongodb | awk '{print $1}')
+fi
+if [ -z "$secondary1_ip" ]; then
+  secondary1_ip=$(podman pod inspect --format '{{.NetworkSettings.IPs}}' secondary-mongodb-1 | awk '{print $1}')
+fi
+if [ -z "$secondary2_ip" ]; then
+  secondary2_ip=$(podman pod inspect --format '{{.NetworkSettings.IPs}}' secondary-mongodb-2 | awk '{print $1}')
+fi
+
+# Second fallback if needed
+if [ -z "$central_ip" ]; then
+  central_ip=$(podman inspect --format '{{.NetworkSettings.IPAddress}}' central-mongodb)
+fi
+if [ -z "$secondary1_ip" ]; then
+  secondary1_ip=$(podman inspect --format '{{.NetworkSettings.IPAddress}}' secondary-mongodb-1)
+fi
+if [ -z "$secondary2_ip" ]; then
+  secondary2_ip=$(podman inspect --format '{{.NetworkSettings.IPAddress}}' secondary-mongodb-2)
+fi
 
 echo "Central MongoDB IP: $central_ip"
 echo "Secondary MongoDB 1 IP: $secondary1_ip"
@@ -114,7 +144,18 @@ echo "Checking replica set status..."
 sleep 10
 podman exec -it central-mongodb mongosh --host localhost --port 27017 -u admin -p password --authenticationDatabase admin --eval "rs.status()"
 
+# Ping test for each MongoDB container
+echo "Pinging MongoDB containers to verify network connectivity..."
+
+echo "Pinging Central MongoDB..."
+ping -c 4 $central_ip
+
+echo "Pinging Secondary MongoDB 1..."
+ping -c 4 $secondary1_ip
+
+echo "Pinging Secondary MongoDB 2..."
+ping -c 4 $secondary2_ip
+
 echo "MongoDB replica set setup complete."
-# echo "Connection string: mongodb://admin:password@localhost:27017,localhost:27018,localhost:27019/?replicaSet=rs0"
 echo "To connect to the MongoDB replica set, use the following connection string:"
 echo "mongodb://admin:password@${central_ip}:27017,${secondary1_ip}:27017,${secondary2_ip}:27017/?replicaSet=rs0"
