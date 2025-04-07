@@ -17,6 +17,24 @@ check_container_running() {
   fi
 }
 
+# Function to wait for MongoDB container to be ready
+wait_for_mongo_ready() {
+  container_name=$1
+  retries=10
+  while [ $retries -gt 0 ]; do
+    if podman exec $container_name mongosh --eval "db.runCommand({ ping: 1 })" > /dev/null 2>&1; then
+      echo "MongoDB container $container_name is ready"
+      return 0
+    else
+      echo "Waiting for MongoDB container $container_name to be ready..."
+      sleep 5
+      ((retries--))
+    fi
+  done
+  echo "Error: MongoDB container $container_name is not ready after waiting"
+  exit 1
+}
+
 # Clean up any existing containers and pods
 echo "Cleaning up existing containers and pods..."
 podman pod rm -f central-mongodb 2>/dev/null || true
@@ -89,42 +107,11 @@ check_container_running central-mongodb
 check_container_running secondary-mongodb-1
 check_container_running secondary-mongodb-2
 
-# Get IP addresses of the pods
-echo "Getting container IP addresses..."
-# Fixed the inspect syntax - using --format instead of -f and getting IP from correct location
-central_ip=$(podman inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' central-mongodb)
-secondary1_ip=$(podman inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' secondary-mongodb-1)
-secondary2_ip=$(podman inspect --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' secondary-mongodb-2)
-
-# Fallback to pod IP if container IP is empty
-if [ -z "$central_ip" ]; then
-  central_ip=$(podman pod inspect --format '{{.NetworkSettings.IPs}}' central-mongodb | awk '{print $1}')
-fi
-if [ -z "$secondary1_ip" ]; then
-  secondary1_ip=$(podman pod inspect --format '{{.NetworkSettings.IPs}}' secondary-mongodb-1 | awk '{print $1}')
-fi
-if [ -z "$secondary2_ip" ]; then
-  secondary2_ip=$(podman pod inspect --format '{{.NetworkSettings.IPs}}' secondary-mongodb-2 | awk '{print $1}')
-fi
-
-# Second fallback if needed
-if [ -z "$central_ip" ]; then
-  central_ip=$(podman inspect --format '{{.NetworkSettings.IPAddress}}' central-mongodb)
-fi
-if [ -z "$secondary1_ip" ]; then
-  secondary1_ip=$(podman inspect --format '{{.NetworkSettings.IPAddress}}' secondary-mongodb-1)
-fi
-if [ -z "$secondary2_ip" ]; then
-  secondary2_ip=$(podman inspect --format '{{.NetworkSettings.IPAddress}}' secondary-mongodb-2)
-fi
-
-echo "Central MongoDB IP: $central_ip"
-echo "Secondary MongoDB 1 IP: $secondary1_ip"
-echo "Secondary MongoDB 2 IP: $secondary2_ip"
-
-# Verify admin user creation and authentication
-echo "Verifying MongoDB authentication..."
-podman exec -it central-mongodb mongosh --host localhost --port 27017 -u admin -p password --authenticationDatabase admin --eval 'db.runCommand({ connectionStatus: 1 })'
+# Wait for MongoDB containers to be ready
+echo "Waiting for MongoDB containers to be ready..."
+wait_for_mongo_ready central-mongodb
+wait_for_mongo_ready secondary-mongodb-1
+wait_for_mongo_ready secondary-mongodb-2
 
 # Initialize the replica set with IP addresses
 echo "Initializing replica set..."
@@ -132,9 +119,9 @@ podman exec -it central-mongodb mongosh --host localhost --port 27017 -u admin -
 rs.initiate({
   _id: 'rs0',
   members: [
-    { _id: 0, host: '${central_ip}:27017' },
-    { _id: 1, host: '${secondary1_ip}:27017' },
-    { _id: 2, host: '${secondary2_ip}:27017' }
+    { _id: 0, host: 'central-mongodb:27017' },
+    { _id: 1, host: 'secondary-mongodb-1:27017' },
+    { _id: 2, host: 'secondary-mongodb-2:27017' }
   ]
 })
 "
@@ -143,19 +130,3 @@ rs.initiate({
 echo "Checking replica set status..."
 sleep 10
 podman exec -it central-mongodb mongosh --host localhost --port 27017 -u admin -p password --authenticationDatabase admin --eval "rs.status()"
-
-# Ping test for each MongoDB container
-echo "Pinging MongoDB containers to verify network connectivity..."
-
-echo "Pinging Central MongoDB..."
-ping -c 4 $central_ip
-
-echo "Pinging Secondary MongoDB 1..."
-ping -c 4 $secondary1_ip
-
-echo "Pinging Secondary MongoDB 2..."
-ping -c 4 $secondary2_ip
-
-echo "MongoDB replica set setup complete."
-echo "To connect to the MongoDB replica set, use the following connection string:"
-echo "mongodb://admin:password@${central_ip}:27017,${secondary1_ip}:27017,${secondary2_ip}:27017/?replicaSet=rs0"

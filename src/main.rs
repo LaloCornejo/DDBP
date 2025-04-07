@@ -8,17 +8,29 @@ use tracing::{Level, error, info};
 use tracing_subscriber;
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Post {
-    title: String,
-    content: String,
-    author: String,
+struct User {
+    username: String,
+    email: String,
+    password_hash: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Media {
+struct Post {
+    user_id: String,
+    content: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Comment {
     post_id: String,
-    media_url: String,
-    media_type: String,
+    user_id: String,
+    content: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Follow {
+    follower_id: String,
+    following_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -106,14 +118,44 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(app_state.clone())
+            .route("/create_user", web::post().to(create_user_handler))
             .route("/create_post", web::post().to(create_post_handler))
-            .route("/add_media", web::post().to(add_media_handler))
+            .route("/create_comment", web::post().to(create_comment_handler))
+            .route("/follow_user", web::post().to(follow_user_handler))
             .route("/get_post/{id}", web::get().to(get_post_handler))
             .route("/health", web::get().to(health_check_handler))
     })
     .bind("127.0.0.1:8000")?
     .run()
     .await
+}
+
+async fn create_user_handler(
+    user: web::Json<User>,
+    state: web::Data<AppState>,
+) -> Result<impl Responder> {
+    let collection = state.db.collection::<Document>("users");
+
+    let user_id = Uuid::new_v4().to_string();
+    let user_doc = doc! {
+        "_id": &user_id,
+        "username": &user.username,
+        "email": &user.email,
+        "password_hash": &user.password_hash,
+        "created_at": chrono::Utc::now().to_rfc3339()
+    };
+
+    match collection.insert_one(user_doc, None).await {
+        Ok(_) => Ok(HttpResponse::Ok().json(Response {
+            message: format!("User created successfully with ID: {}", user_id),
+        })),
+        Err(e) => {
+            error!("Error creating user: {}", e);
+            Ok(HttpResponse::InternalServerError().json(Response {
+                message: "Failed to create user".to_string(),
+            }))
+        }
+    }
 }
 
 async fn create_post_handler(
@@ -125,9 +167,8 @@ async fn create_post_handler(
     let post_id = Uuid::new_v4().to_string();
     let post_doc = doc! {
         "_id": &post_id,
-        "title": &post.title,
+        "user_id": &post.user_id,
         "content": &post.content,
-        "author": &post.author,
         "created_at": chrono::Utc::now().to_rfc3339()
     };
 
@@ -144,34 +185,54 @@ async fn create_post_handler(
     }
 }
 
-async fn add_media_handler(
-    media: web::Json<Media>,
+async fn create_comment_handler(
+    comment: web::Json<Comment>,
     state: web::Data<AppState>,
 ) -> Result<impl Responder> {
-    println!("Adding media for post: {}", media.post_id);
+    let collection = state.db.collection::<Document>("comments");
 
-    let collection = state.db.collection::<Document>("media");
-
-    let media_id = Uuid::new_v4().to_string();
-    let media_doc = doc! {
-        "_id": &media_id,
-        "post_id": &media.post_id,
-        "media_url": &media.media_url,
-        "media_type": &media.media_type,
-        "uploaded_at": chrono::Utc::now().to_rfc3339()
+    let comment_id = Uuid::new_v4().to_string();
+    let comment_doc = doc! {
+        "_id": &comment_id,
+        "post_id": &comment.post_id,
+        "user_id": &comment.user_id,
+        "content": &comment.content,
+        "created_at": chrono::Utc::now().to_rfc3339()
     };
 
-    match collection.insert_one(media_doc, None).await {
-        Ok(_) => {
-            println!("Media added successfully with ID: {}", media_id);
-            Ok(HttpResponse::Ok().json(Response {
-                message: format!("Media added successfully with ID: {}", media_id),
+    match collection.insert_one(comment_doc, None).await {
+        Ok(_) => Ok(HttpResponse::Ok().json(Response {
+            message: format!("Comment created successfully with ID: {}", comment_id),
+        })),
+        Err(e) => {
+            error!("Error creating comment: {}", e);
+            Ok(HttpResponse::InternalServerError().json(Response {
+                message: "Failed to create comment".to_string(),
             }))
         }
+    }
+}
+
+async fn follow_user_handler(
+    follow: web::Json<Follow>,
+    state: web::Data<AppState>,
+) -> Result<impl Responder> {
+    let collection = state.db.collection::<Document>("follows");
+
+    let follow_doc = doc! {
+        "follower_id": &follow.follower_id,
+        "following_id": &follow.following_id,
+        "created_at": chrono::Utc::now().to_rfc3339()
+    };
+
+    match collection.insert_one(follow_doc, None).await {
+        Ok(_) => Ok(HttpResponse::Ok().json(Response {
+            message: "Follow action recorded successfully".to_string(),
+        })),
         Err(e) => {
-            eprintln!("Error adding media: {}", e);
+            error!("Error recording follow action: {}", e);
             Ok(HttpResponse::InternalServerError().json(Response {
-                message: format!("Failed to add media: {}", e),
+                message: "Failed to record follow action".to_string(),
             }))
         }
     }
@@ -190,11 +251,10 @@ async fn get_post_handler(
 
     match collection.find_one(filter, None).await {
         Ok(Some(doc)) => {
-            println!("Post found: {}", doc.get_str("title").unwrap_or_default());
+            println!("Post found: {}", doc.get_str("content").unwrap_or_default());
             let post = Post {
-                title: doc.get_str("title").unwrap_or_default().to_string(),
+                user_id: doc.get_str("user_id").unwrap_or_default().to_string(),
                 content: doc.get_str("content").unwrap_or_default().to_string(),
-                author: doc.get_str("author").unwrap_or_default().to_string(),
             };
             Ok(HttpResponse::Ok().json(post))
         }
