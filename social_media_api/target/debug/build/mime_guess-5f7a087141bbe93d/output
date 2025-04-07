@@ -1,1 +1,0 @@
-cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/Users/lalocornejo/Documents/Code/DDBP/social_media_api/target/debug/build/mime_guess-5f7a087141bbe93d/out/mime_types_generated.rs
