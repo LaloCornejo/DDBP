@@ -1,0 +1,82 @@
+version: '3'
+
+services:
+  # Primary MongoDB node
+  central-mongodb:
+    image: mongo:latest
+    container_name: central-mongodb
+    command: mongod --replSet rs0 --keyFile /etc/mongo-keyfile --bind_ip_all --auth --port 27017
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongo-keyfile:/etc/mongo-keyfile:ro
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    networks:
+      - mongo-network
+
+  # First secondary MongoDB node
+  secondary-mongodb-1:
+    image: mongo:latest
+    container_name: secondary-mongodb-1
+    command: mongod --replSet rs0 --keyFile /etc/mongo-keyfile --bind_ip_all --auth --port 27017
+    ports:
+      - "27018:27017"
+    volumes:
+      - ./mongo-keyfile:/etc/mongo-keyfile:ro
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    networks:
+      - mongo-network
+    depends_on:
+      - central-mongodb
+
+  # Second secondary MongoDB node
+  secondary-mongodb-2:
+    image: mongo:latest
+    container_name: secondary-mongodb-2
+    command: mongod --replSet rs0 --keyFile /etc/mongo-keyfile --bind_ip_all --auth --port 27017
+    ports:
+      - "27019:27017"
+    volumes:
+      - ./mongo-keyfile:/etc/mongo-keyfile:ro
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    networks:
+      - mongo-network
+    depends_on:
+      - central-mongodb
+
+  # MongoDB setup container - will initialize the replica set
+  mongo-setup:
+    image: mongo:latest
+    container_name: mongo-setup
+    restart: "no"
+    depends_on:
+      - central-mongodb
+      - secondary-mongodb-1
+      - secondary-mongodb-2
+    networks:
+      - mongo-network
+    volumes:
+      - ./setup-replica.sh:/setup-replica.sh:ro
+    entrypoint: ["/bin/bash", "/setup-replica.sh"]
+
+  # Your Rust application
+  rust-app:
+    build:
+      context: ./rust-app  # Path to your Rust application directory
+    container_name: app 
+    depends_on:
+      - mongo-setup
+    networks:
+      - mongo-network
+    environment:
+      - MONGODB_URI=mongodb://admin:password@central-mongodb:27017,secondary-mongodb-1:27017,secondary-mongodb-2:27017/social_media_db?replicaSet=rs0&authSource=social_media_db
+
+networks:
+  mongo-network:
+    driver: bridge

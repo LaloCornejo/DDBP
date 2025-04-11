@@ -1,0 +1,14 @@
+[2m2025-04-11T00:34:15.644675Z[0m [32m INFO[0m [2mDDBP[0m[2m:[0m Starting social media API application
+[2m2025-04-11T00:34:15.645928Z[0m [32m INFO[0m [2mDDBP[0m[2m:[0m Connecting to MongoDB at: mongodb://admin:****@10.89.0.3:27017/?replicaSet=rs0
+[2m2025-04-11T00:34:15.649700Z[0m [32m INFO[0m [2mDDBP[0m[2m:[0m MongoDB connection string parsed successfully
+[2m2025-04-11T00:34:15.654836Z[0m [32m INFO[0m [2mDDBP[0m[2m:[0m Successfully created MongoDB client
+[2m2025-04-11T00:34:15.654906Z[0m [32m INFO[0m [2mDDBP[0m[2m:[0m Testing MongoDB connection with ping...
+[2m2025-04-11T00:34:25.659858Z[0m [31mERROR[0m [2mDDBP[0m[2m:[0m Ping operation timed out after 10 seconds
+[2m2025-04-11T00:34:25.660403Z[0m [33m WARN[0m [2mDDBP[0m[2m:[0m Will continue despite timeout
+[2m2025-04-11T00:34:25.660462Z[0m [32m INFO[0m [2mDDBP[0m[2m:[0m Testing access to social_media_db...
+[2m2025-04-11T00:34:55.664871Z[0m [33m WARN[0m [2mDDBP[0m[2m:[0m Failed to list collections in social_media_db: Kind: Server selection timeout: No available servers. Topology: { Type: ReplicaSetNoPrimary, Set Name: rs0, Servers: [ { Address: 10.89.0.3:27017, Type: Unknown, Error: Kind: I/O error: timed out, labels: {} } ] }, labels: {}
+[2m2025-04-11T00:34:55.664976Z[0m [32m INFO[0m [2mDDBP[0m[2m:[0m Will attempt to create collections on first use
+[2m2025-04-11T00:34:55.665050Z[0m [32m INFO[0m [2mDDBP[0m[2m:[0m Server starting at http://0.0.0.0:8000
+[2m2025-04-11T00:34:55.666737Z[0m [32m INFO[0m [2mactix_server::builder[0m[2m:[0m starting 4 workers
+[2m2025-04-11T00:34:55.667411Z[0m [32m INFO[0m [2mactix_server::server[0m[2m:[0m Actix runtime found; starting in Actix runtime
+[2m2025-04-11T00:34:55.667769Z[0m [32m INFO[0m [2mactix_server::server[0m[2m:[0m starting service: "actix-web-service-0.0.0.0:8000", workers: 4, listening on: 0.0.0.0:8000
