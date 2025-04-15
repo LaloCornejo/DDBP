@@ -4,7 +4,7 @@ use dotenv::dotenv;
 use futures_util::StreamExt;
 use mongodb::{
     bson::{doc, Document},
-    options::{ClientOptions, ResolverConfig},
+    options::ClientOptions,
     Client,
 };
 use num_cpus;
@@ -131,19 +131,16 @@ async fn main() -> std::io::Result<()> {
     );
 
     // Configure MongoDB client options
-    let mut client_options =
-        match ClientOptions::parse_with_resolver_config(&mongo_uri, ResolverConfig::cloudflare())
-            .await
-        {
-            Ok(options) => {
-                info!("MongoDB connection string parsed successfully");
-                options
-            }
-            Err(e) => {
-                error!("Failed to parse MongoDB connection string: {}", e);
-                panic!("Cannot start application without database connection");
-            }
-        };
+    let mut client_options = match ClientOptions::parse(&mongo_uri).await {
+        Ok(options) => {
+            info!("MongoDB connection string parsed successfully");
+            options
+        }
+        Err(e) => {
+            error!("Failed to parse MongoDB connection string: {}", e);
+            panic!("Cannot start application without database connection");
+        }
+    };
 
     // Set MongoDB client timeout options
     client_options.connect_timeout = Some(Duration::from_secs(30));
@@ -166,7 +163,7 @@ async fn main() -> std::io::Result<()> {
     info!("Testing MongoDB connection with ping...");
     let ping_result = tokio::time::timeout(
         Duration::from_secs(10),
-        client.database("admin").run_command(doc! {"ping": 1}, None),
+        client.database("admin").run_command(doc! {"ping": 1}),
     )
     .await;
 
@@ -182,7 +179,7 @@ async fn main() -> std::io::Result<()> {
             info!("Attempting second ping with timeout...");
             match tokio::time::timeout(
                 Duration::from_secs(10),
-                client.database("admin").run_command(doc! {"ping": 1}, None),
+                client.database("admin").run_command(doc! {"ping": 1}),
             )
             .await
             {
@@ -207,11 +204,13 @@ async fn main() -> std::io::Result<()> {
     let db = client.database("social_media_db");
 
     info!("Testing access to social_media_db...");
-    match db.list_collection_names(None).await {
-        Ok(collections) => info!(
-            "Successfully accessed social_media_db. Collections: {:?}",
-            collections
-        ),
+    match db.list_collection_names().await {
+        Ok(collections) => {
+            info!(
+                "Successfully accessed social_media_db. Collections: {:?}",
+                collections
+            );
+        }
         Err(e) => {
             warn!("Failed to list collections in social_media_db: {}", e);
             info!("Will attempt to create collections on first use");
@@ -272,7 +271,7 @@ async fn create_user_handler(
 
     // Check if user with this email already exists
     let existing_filter = doc! { "email": &user.email };
-    if let Ok(Some(_)) = collection.find_one(existing_filter, None).await {
+    if let Ok(Some(_)) = collection.find_one(existing_filter).await {
         return Err(AppError::InvalidInput(format!(
             "User with email {} already exists",
             user.email
@@ -288,7 +287,7 @@ async fn create_user_handler(
         "created_at": chrono::Utc::now().to_rfc3339()
     };
 
-    match collection.insert_one(user_doc, None).await {
+    match collection.insert_one(user_doc).await {
         Ok(_) => {
             info!("User created successfully with ID: {}", user_id);
             Ok(HttpResponse::Created().json(Response {
@@ -326,7 +325,7 @@ async fn create_post_handler(
     let users_collection = state.db.collection::<Document>("users");
     let user_filter = doc! { "_id": &post.user_id };
 
-    if let Ok(None) = users_collection.find_one(user_filter, None).await {
+    if let Ok(None) = users_collection.find_one(user_filter).await {
         return Err(AppError::NotFound(format!(
             "User with ID {} not found",
             post.user_id
@@ -343,7 +342,7 @@ async fn create_post_handler(
         "created_at": chrono::Utc::now().to_rfc3339()
     };
 
-    match collection.insert_one(post_doc, None).await {
+    match collection.insert_one(post_doc).await {
         Ok(_) => {
             info!("Post created successfully with ID: {}", post_id);
             Ok(HttpResponse::Created().json(Response {
@@ -390,7 +389,7 @@ async fn create_comment_handler(
     let posts_collection = state.db.collection::<Document>("posts");
     let post_filter = doc! { "_id": &comment.post_id };
 
-    if let Ok(None) = posts_collection.find_one(post_filter, None).await {
+    if let Ok(None) = posts_collection.find_one(post_filter).await {
         return Err(AppError::NotFound(format!(
             "Post with ID {} not found",
             comment.post_id
@@ -401,7 +400,7 @@ async fn create_comment_handler(
     let users_collection = state.db.collection::<Document>("users");
     let user_filter = doc! { "_id": &comment.user_id };
 
-    if let Ok(None) = users_collection.find_one(user_filter, None).await {
+    if let Ok(None) = users_collection.find_one(user_filter).await {
         return Err(AppError::NotFound(format!(
             "User with ID {} not found",
             comment.user_id
@@ -419,7 +418,7 @@ async fn create_comment_handler(
         "created_at": chrono::Utc::now().to_rfc3339()
     };
 
-    match collection.insert_one(comment_doc, None).await {
+    match collection.insert_one(comment_doc).await {
         Ok(_) => {
             info!("Comment created successfully with ID: {}", comment_id);
             Ok(HttpResponse::Created().json(Response {
@@ -468,7 +467,7 @@ async fn follow_user_handler(
 
     // Check follower exists
     let follower_filter = doc! { "_id": &follow.follower_id };
-    if let Ok(None) = users_collection.find_one(follower_filter, None).await {
+    if let Ok(None) = users_collection.find_one(follower_filter).await {
         return Err(AppError::NotFound(format!(
             "Follower with ID {} not found",
             follow.follower_id
@@ -477,7 +476,7 @@ async fn follow_user_handler(
 
     // Check following user exists
     let following_filter = doc! { "_id": &follow.following_id };
-    if let Ok(None) = users_collection.find_one(following_filter, None).await {
+    if let Ok(None) = users_collection.find_one(following_filter).await {
         return Err(AppError::NotFound(format!(
             "User to follow with ID {} not found",
             follow.following_id
@@ -491,10 +490,7 @@ async fn follow_user_handler(
         "following_id": &follow.following_id
     };
 
-    if let Ok(Some(_)) = follows_collection
-        .find_one(existing_follow_filter, None)
-        .await
-    {
+    if let Ok(Some(_)) = follows_collection.find_one(existing_follow_filter).await {
         return Err(AppError::InvalidInput(format!(
             "User {} already follows user {}",
             follow.follower_id, follow.following_id
@@ -507,7 +503,7 @@ async fn follow_user_handler(
         "created_at": chrono::Utc::now().to_rfc3339()
     };
 
-    match follows_collection.insert_one(follow_doc, None).await {
+    match follows_collection.insert_one(follow_doc).await {
         Ok(_) => {
             info!("Follow action recorded successfully");
             Ok(HttpResponse::Created().json(Response::<()> {
@@ -547,7 +543,7 @@ async fn get_post_handler(
     let posts_collection = state.db.collection::<Document>("posts");
     let filter = doc! { "_id": id.clone() };
 
-    match posts_collection.find_one(filter, None).await {
+    match posts_collection.find_one(filter).await {
         Ok(Some(post_doc)) => {
             // Extract post data with proper error handling
             let created_at = match post_doc.get_str("created_at") {
@@ -613,7 +609,7 @@ async fn get_post_handler(
             let mut comments = Vec::new();
 
             // Attempt to fetch comments, but don't fail if we can't get them
-            if let Ok(mut cursor) = comments_collection.find(comments_filter, None).await {
+            if let Ok(mut cursor) = comments_collection.find(comments_filter).await {
                 while let Some(comment_doc_result) = cursor.next().await {
                     if let Ok(comment_doc) = comment_doc_result {
                         let comment_id = comment_doc.get_str("_id").unwrap_or_default().to_string();
@@ -671,7 +667,7 @@ async fn health_check_handler(state: web::Data<AppState>) -> Result<impl Respond
 
     let timeout_future = tokio::time::timeout(
         Duration::from_secs(5),
-        state.db.run_command(doc! {"ping": 1}, None),
+        state.db.run_command(doc! {"ping": 1}),
     )
     .await;
 

@@ -1,0 +1,9 @@
+/Users/lalocornejo/Documents/Code/DDBP/rust-app/target/debug/deps/libicu_normalizer-02e15d0d5f751181.rmeta: /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/lib.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/error.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/properties.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/provider.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/uts46.rs
+
+/Users/lalocornejo/Documents/Code/DDBP/rust-app/target/debug/deps/icu_normalizer-02e15d0d5f751181.d: /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/lib.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/error.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/properties.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/provider.rs /Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/uts46.rs
+
+/Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/lib.rs:
+/Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/error.rs:
+/Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/properties.rs:
+/Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/provider.rs:
+/Users/lalocornejo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/icu_normalizer-1.5.0/src/uts46.rs:
