@@ -75,7 +75,11 @@ services:
     networks:
       - mongo-network
     environment:
-      - MONGODB_URI=mongodb://admin:password@central-mongodb:27017,secondary-mongodb-1:27017,secondary-mongodb-2:27017/social_media_db?replicaSet=rs0&authSource=social_media_db
+      - MONGO_URI=mongodb://admin:password@central-mongodb:27017,secondary-mongodb-1:27017,secondary-mongodb-2:27017/social_media_db?replicaSet=rs0&authSource=admin
+    tty: true
+    stdin_open: true
+    ports:
+      - "8080:8080"  # Assuming the Rust API uses port 8080 internally
 
 networks:
   mongo-network:

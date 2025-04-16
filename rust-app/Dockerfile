@@ -1,51 +1,59 @@
-FROM rust:1.81-slim AS planner
-WORKDIR /usr/src/app
-# We only need the Cargo.toml and Cargo.lock to plan dependencies
-COPY Cargo.toml Cargo.toml
-# Create a dummy Cargo.lock if it doesn't exist
-RUN touch Cargo.lock
-
-# Stage 1: Dependency caching layer
-FROM rust:1.81-slim AS cacher
-WORKDIR /usr/src/app
-# First, copy the manifest files
-COPY Cargo.toml Cargo.toml
-# Create a fake src directory with minimal content needed for cargo
-RUN mkdir -p src && \
-    echo 'fn main() { println!("Dummy implementation"); }' > src/main.rs
-# Build the dependencies without the actual source code
-# This layer will be cached unless Cargo.toml changes
-RUN cargo build --release
-
-# Stage 2: Builder stage
+# Stage 1: Builder stage - more efficient version
 FROM rust:1.81-slim AS builder
 WORKDIR /usr/src/app
-# Copy the manifests
-COPY Cargo.toml Cargo.toml
-COPY Cargo.lock Cargo.lock
-# Copy the src directory
-COPY src src/
-# Copy the target directory from cacher stage to avoid rebuilding dependencies
-COPY --from=cacher /usr/src/app/target target
-# Build the application
-RUN cargo build --release
 
-# Stage 3: Final stage
-FROM debian:bullseye-slim
+# Copy only the files needed for build dependencies first
+COPY Cargo.toml Cargo.lock ./
 
-# Install any runtime dependencies
+# Create a dummy main.rs to build dependencies
+RUN mkdir -p src && \
+    echo 'fn main() {}' > src/main.rs && \
+    cargo build --release && \
+    rm -rf src
+
+# Now copy the actual source code
+COPY src ./src
+
+# Build the application with the already-cached dependencies
+RUN touch src/main.rs && cargo build --release
+
+# Stage 2: Final runtime stage
+FROM debian:bookworm-slim
+
+# Install minimal runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    bash \
+    tini \
     && rm -rf /var/lib/apt/lists/*
+
+# Create a script to run the app and keep container alive
+RUN echo '#!/bin/bash\n\
+echo "Starting application..."\n\
+/usr/local/bin/DDBP 2>&1 | tee /tmp/app.log\n\
+echo "Application exited. Container will remain running for log inspection."\n\
+echo "To view logs, use: cat /tmp/app.log"\n\
+echo "Press Ctrl+C to exit container"\n\
+tail -f /dev/null' > /usr/local/bin/run-and-keep-alive.sh && \
+    chmod +x /usr/local/bin/run-and-keep-alive.sh
 
 # Create a non-root user
 RUN useradd -u 1001 -g 0 appuser
 
-# Copy the binary from the builder stage
-COPY --from=builder /usr/src/app/target/release/DDBP /usr/local/bin/app
+# Copy only the binary from the builder stage
+COPY --from=builder /usr/src/app/target/release/DDBP /usr/local/bin/DDBP
+RUN chmod +x /usr/local/bin/DDBP && \
+    chown appuser:0 /usr/local/bin/DDBP /usr/local/bin/run-and-keep-alive.sh && \
+    chmod 755 /usr/local/bin/DDBP /usr/local/bin/run-and-keep-alive.sh && \
+    mkdir -p /tmp/logs && \
+    chown -R appuser:0 /tmp/logs
 
 # Set the user to run the application
 USER appuser
+WORKDIR /home/appuser
 
-# Command to run the executable
-CMD ["/usr/local/bin/app"]
+# Use tini as entrypoint to handle signals properly
+ENTRYPOINT ["/usr/bin/tini", "--"]
+
+# Command to run the executable and keep container alive
+CMD ["/usr/local/bin/run-and-keep-alive.sh"]
