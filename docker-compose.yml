@@ -79,7 +79,7 @@ services:
     tty: true
     stdin_open: true
     ports:
-      - "8080:8080"  # Assuming the Rust API uses port 8080 internally
+      - "8000:8000"  # Assuming the Rust API uses port 8080 internally
 
 networks:
   mongo-network:
