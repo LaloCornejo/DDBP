@@ -16,9 +16,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: EnterDIR
-      run: cd rust-app/
     - name: Build
+      working-directory: ./rust-app
       run: cargo build --verbose
     - name: Run tests
+      working-directory: ./rust-app
       run: cargo test --verbose
