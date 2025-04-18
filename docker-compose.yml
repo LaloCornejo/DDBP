@@ -69,17 +69,18 @@ services:
   rust-app:
     build:
       context: ./rust-app  # Path to your Rust application directory
-    container_name: app 
+    container_name: ddbp-rust-app
     depends_on:
       - mongo-setup
     networks:
       - mongo-network
     environment:
+      - HOST=0.0.0.0
       - MONGO_URI=mongodb://admin:password@central-mongodb:27017,secondary-mongodb-1:27017,secondary-mongodb-2:27017/social_media_db?replicaSet=rs0&authSource=admin
     tty: true
     stdin_open: true
     ports:
-      - "8000:8000"  # Assuming the Rust API uses port 8080 internally
+      - "8000:8080"  # Map external port 8000 to internal port 8080
 
 networks:
   mongo-network:
