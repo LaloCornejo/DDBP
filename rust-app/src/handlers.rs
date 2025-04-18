@@ -67,7 +67,6 @@ pub async fn health_check_handler(state: web::Data<AppState>) -> Result<impl Res
         data: None,
     }))
 }
-}
 
 // Create User Handler
 pub async fn create_user_handler(
