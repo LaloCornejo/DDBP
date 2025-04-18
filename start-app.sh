@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Create the network if it doesn't exist
-echo "Creating MongoDB network..."
-podman network create ddbp_mongo-network 2>/dev/null || true
+# Perform aggressive cleanup
+echo "Performing aggressive cleanup..."
+podman rm -f $(podman ps -a -q) >/dev/null 2>&1 || true
+podman network prune -f >/dev/null 2>&1 || true
 
 # Check if there are changes in the Rust application
 echo "Checking for code changes..."
@@ -19,9 +20,9 @@ else
   echo "No changes detected. Skipping rebuild."
 fi
 
-# Start MongoDB containers and setup
-echo "Starting MongoDB containers..."
-podman compose up -d central-mongodb secondary-mongodb-1 secondary-mongodb-2 mongo-setup
+# Start containers
+echo "Starting containers..."
+podman compose up -d
 
 # Wait for MongoDB replica set to be fully initialized
 echo "Waiting for MongoDB replica set to initialize..."
@@ -57,46 +58,4 @@ if [ "$REPLICA_READY" = false ]; then
   exit 1
 fi
 
-echo "Starting Rust application..." 
-
-# Remove existing container if it exists
-CONTAINER_EXISTS=$(podman ps -a --filter name=ddbp-rust-app -q)
-if [ ! -z "$CONTAINER_EXISTS" ]; then
-  echo "Removing existing Rust application container..."
-  podman rm -f ddbp-rust-app >/dev/null 2>&1
-fi
-
-# Start the Rust application container
-podman run --name ddbp-rust-app \
-    --network ddbp_mongo-network \
-    -p 8000:8080 \
-    -e HOST=0.0.0.0 \
-    -e MONGO_URI="mongodb://admin:password@central-mongodb:27017,secondary-mongodb-1:27017,secondary-mongodb-2:27017/social_media_db?replicaSet=rs0&authSource=admin" \
-    -d \
-    docker.io/library/ddbp-rust-app:latest
-
-# Check health of the application
-echo "Checking application health..."
-MAX_HEALTH_RETRIES=30
-HEALTH_RETRY_COUNT=0
-APP_HEALTHY=false
-
-while [ $HEALTH_RETRY_COUNT -lt $MAX_HEALTH_RETRIES ] && [ "$APP_HEALTHY" = false ]; do
-  HEALTH_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health 2>/dev/null || echo "000")
-  
-  if [ "$HEALTH_RESPONSE" = "200" ]; then
-    echo "Application is healthy and ready to use!"
-    APP_HEALTHY=true
-  else
-    HEALTH_RETRY_COUNT=$((HEALTH_RETRY_COUNT+1))
-    echo "Waiting for application to become healthy (attempt $HEALTH_RETRY_COUNT/$MAX_HEALTH_RETRIES)..."
-    sleep 2
-  fi
-done
-
-if [ "$APP_HEALTHY" = false ]; then
-  echo "Warning: Application failed to report healthy status."
-  echo "Check application logs: podman logs ddbp-rust-app"
-else
-  echo "DDBP application is running at http://localhost:8000"
-fi
+echo "DDBP application is running at http://localhost:8000"

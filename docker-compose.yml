@@ -1,3 +1,9 @@
+version: "3.8"
+
+networks:
+  ddbp_mongo-network:
+    name: ddbp_mongo-network
+
 # version: '3'
 
 services:
@@ -14,7 +20,7 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=password
     networks:
-      - mongo-network
+      - ddbp_mongo-network
 
   # First secondary MongoDB node
   secondary-mongodb-1:
@@ -29,7 +35,7 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=password
     networks:
-      - mongo-network
+      - ddbp_mongo-network
     depends_on:
       - central-mongodb
 
@@ -46,7 +52,7 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=password
     networks:
-      - mongo-network
+      - ddbp_mongo-network
     depends_on:
       - central-mongodb
 
@@ -60,7 +66,7 @@ services:
       - secondary-mongodb-1
       - secondary-mongodb-2
     networks:
-      - mongo-network
+      - ddbp_mongo-network
     volumes:
       - ./setup-replica.sh:/setup-replica.sh:ro
     entrypoint: ["/bin/bash", "/setup-replica.sh"]
@@ -73,7 +79,7 @@ services:
     depends_on:
       - mongo-setup
     networks:
-      - mongo-network
+      - ddbp_mongo-network
     environment:
       - HOST=0.0.0.0
       - MONGO_URI=mongodb://admin:password@central-mongodb:27017,secondary-mongodb-1:27017,secondary-mongodb-2:27017/social_media_db?replicaSet=rs0&authSource=admin
@@ -81,7 +87,3 @@ services:
     stdin_open: true
     ports:
       - "8000:8080"  # Map external port 8000 to internal port 8080
-
-networks:
-  mongo-network:
-    driver: bridge

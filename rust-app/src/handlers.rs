@@ -8,35 +8,65 @@ use uuid::Uuid;
 // Health Check Handler
 pub async fn health_check_handler(state: web::Data<AppState>) -> Result<impl Responder, AppError> {
     info!("Health check requested");
-    let timeout_future = tokio::time::timeout(
-        std::time::Duration::from_secs(5),
-        state.db.run_command(doc! {"ping": 1}),
-    )
-    .await;
-
-    match timeout_future {
-        Ok(Ok(_)) => Ok(HttpResponse::Ok().json(Response::<()> {
-            status: "success".to_string(),
-            message: "Service is healthy".to_string(),
-            data: None,
-        })),
-        Ok(Err(e)) => {
-            error!("Health check failed: {}", e);
-            Ok(HttpResponse::ServiceUnavailable().json(Response::<()> {
-                status: "error".to_string(),
-                message: "Service is unhealthy: database connection failed".to_string(),
-                data: None,
-            }))
+    
+    // Longer timeout for health checks (15 seconds instead of 5)
+    let timeout_duration = std::time::Duration::from_secs(15);
+    
+    // Retry logic: try 3 times with a short delay between attempts
+    let max_retries = 3;
+    let mut last_error = None;
+    
+    for attempt in 1..=max_retries {
+        info!("Health check attempt {}/{}", attempt, max_retries);
+        
+        // Try to ping the database with the configured timeout
+        let timeout_future = tokio::time::timeout(
+            timeout_duration,
+            state.db.run_command(doc! {"ping": 1}),
+        )
+        .await;
+        
+        match timeout_future {
+            Ok(Ok(_)) => {
+                // Success! Database is reachable
+                info!("Health check successful on attempt {}", attempt);
+                return Ok(HttpResponse::Ok().json(Response::<()> {
+                    status: "success".to_string(),
+                    message: "Service is healthy".to_string(),
+                    data: None,
+                }));
+            }
+            Ok(Err(e)) => {
+                // Connection established but command failed
+                error!("Health check failed on attempt {}: {}", attempt, e);
+                last_error = Some(e.to_string());
+            }
+            Err(_) => {
+                // Timeout occurred
+                error!("Health check timed out on attempt {}", attempt);
+                last_error = Some("database connection timeout".to_string());
+            }
         }
-        Err(_) => {
-            error!("Health check timed out");
-            Ok(HttpResponse::ServiceUnavailable().json(Response::<()> {
-                status: "error".to_string(),
-                message: "Service is unhealthy: database connection timeout".to_string(),
-                data: None,
-            }))
+        
+        // If we reached the maximum number of retries, break out of the loop
+        if attempt == max_retries {
+            break;
         }
+        
+        // Wait briefly before the next retry
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     }
+    
+    // If we got here, all retries failed
+    let error_message = last_error.unwrap_or_else(|| "unknown database error".to_string());
+    error!("Health check failed after {} attempts: {}", max_retries, error_message);
+    
+    Ok(HttpResponse::ServiceUnavailable().json(Response::<()> {
+        status: "error".to_string(),
+        message: format!("Service is unhealthy: {}", error_message),
+        data: None,
+    }))
+}
 }
 
 // Create User Handler
