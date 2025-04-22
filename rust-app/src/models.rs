@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-// use chrono::{DateTime, Utc};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
@@ -62,12 +61,6 @@ pub struct Like {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct PaginationParams {
-    pub page: Option<u32>,
-    pub limit: Option<u32>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 pub struct UserProfile {
     pub id: String,
     pub username: String,
@@ -93,21 +86,6 @@ pub struct PostDetails {
     pub like_count: i32,
     pub comment_count: i32,
     pub has_liked: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct TimelineResponse {
-    pub posts: Vec<PostDetails>,
-    pub pagination: PaginationMeta,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct PaginationMeta {
-    pub current_page: u32,
-    pub total_pages: u32,
-    pub total_count: u64,
-    pub has_next: bool,
-    pub has_prev: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -90,6 +90,10 @@ db.createUser({
 db.createCollection('users');
 db.createCollection('posts');
 db.createCollection('comments');
+db.createCollection('likes');
+db.createCollection('follows');
+db.createCollection('feed');
+db,createCollection('images');
 db.test.insertOne({ test: true });
 "
 
