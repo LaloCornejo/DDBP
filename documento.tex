@@ -1,0 +1,1136 @@
+\documentclass[12pt,letterpaper]{article}
+
+% Paquetes básicos
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows,shapes}
+\geometry{
+    a4paper,
+    total={170mm,257mm},
+    left=20mm,
+    right=20mm,
+    top=20mm,
+    bottom=20mm,
+}
+
+% Configuración de encabezados y pies de página
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Mongo Red Social Distribuida}
+\fancyhead[R]{\thepage}
+\fancyfoot[C]{DDBP - Documentación}
+
+% Configuración para listados de código
+\definecolor{codebackground}{rgb}{0.95,0.95,0.95}
+\definecolor{codestring}{rgb}{0.2,0.6,0.2}
+\definecolor{codekeyword}{rgb}{0.7,0.1,0.1}
+\definecolor{codecomment}{rgb}{0.5,0.5,0.5}
+
+\lstset{
+    backgroundcolor=\color{codebackground},
+    commentstyle=\color{codecomment},
+    keywordstyle=\color{codekeyword}\bfseries,
+    stringstyle=\color{codestring},
+    basicstyle=\ttfamily\small,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+% Título, autor y fecha
+\title{\LARGE \textbf{Red Social Distribuida - MongoDB}}
+
+\author{
+    Jesus Eduardo Cornejo Clavel \\
+    \textit{ALUMNO} 
+    \and
+    Eduardo Cornejo-Velazquez \\
+    \textit{PROFESOR} 
+}
+
+% \date{\today}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% 1. Arquitectura del Sistema
+\section{Arquitectura del Sistema}
+\subsection{Configuración de MongoDB}
+\subsubsection{Configuración del Replica Set}
+La aplicación implementa una arquitectura de alta disponibilidad basada en MongoDB con una configuración de Replica Set. Esta configuración consta de tres nodos:
+
+\begin{itemize}
+    \item \textbf{Nodo Primario (Primary)}: Gestiona todas las operaciones de escritura y coordina la sincronización con los nodos secundarios.
+    \item \textbf{Nodos Secundarios (Secondary)}: Dos nodos que mantienen copias sincronizadas de los datos y pueden asumir el rol primario en caso de fallos.
+\end{itemize}
+
+Esta arquitectura proporciona:
+\begin{itemize}
+    \item \textbf{Alta disponibilidad}: Si el nodo primario falla, uno de los secundarios puede ser promovido automáticamente.
+    \item \textbf{Redundancia de datos}: Los datos se replican en múltiples nodos, evitando pérdidas en caso de fallos.
+    \item \textbf{Balanceo de lecturas}: Las operaciones de lectura pueden distribuirse entre los nodos secundarios.
+\end{itemize}
+
+La configuración se implementa mediante Docker Compose:
+
+\begin{lstlisting}[language=yaml]
+services:
+  # Nodo MongoDB primario
+  central-mongodb:
+    image: mongo:latest
+    container_name: central-mongodb
+    command: mongod --replSet rs0 --keyFile /etc/mongo-keyfile --bind_ip_all --auth --port 27017
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongo-keyfile:/etc/mongo-keyfile:ro
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    networks:
+      - ddbp_mongo-network
+
+  # Primer nodo MongoDB secundario
+  secondary-mongodb-1:
+    image: mongo:latest
+    container_name: secondary-mongodb-1
+    command: mongod --replSet rs0 --keyFile /etc/mongo-keyfile --bind_ip_all --auth --port 27017
+    ports:
+      - "27018:27017"
+    volumes:
+      - ./mongo-keyfile:/etc/mongo-keyfile:ro
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    networks:
+      - ddbp_mongo-network
+    depends_on:
+      - central-mongodb
+
+  # Segundo nodo MongoDB secundario
+  secondary-mongodb-2:
+    image: mongo:latest
+    container_name: secondary-mongodb-2
+    command: mongod --replSet rs0 --keyFile /etc/mongo-keyfile --bind_ip_all --auth --port 27017
+    ports:
+      - "27019:27017"
+    volumes:
+      - ./mongo-keyfile:/etc/mongo-keyfile:ro
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    networks:
+      - ddbp_mongo-network
+    depends_on:
+      - central-mongodb
+\end{lstlisting}
+
+El proceso de inicialización del Replica Set se maneja mediante un contenedor adicional que ejecuta un script para configurar los nodos como un conjunto replicado:
+
+\begin{lstlisting}[language=yaml]
+  # Contenedor de configuración de MongoDB - inicializa el replica set
+  mongo-setup:
+    image: mongo:latest
+    container_name: mongo-setup
+    restart: "no"
+    depends_on:
+      - central-mongodb
+      - secondary-mongodb-1
+      - secondary-mongodb-2
+    networks:
+      - ddbp_mongo-network
+    volumes:
+      - ./setup-replica.sh:/setup-replica.sh:ro
+    entrypoint: ["/bin/bash", "/setup-replica.sh"]
+\end{lstlisting}
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=2cm]
+        % MongoDB Container Architecture
+        \node[rectangle,draw,minimum width=3cm,minimum height=1.5cm] (setup) {Mongo Setup};
+        \node[rectangle,draw,minimum width=3cm,minimum height=1.5cm,below=1cm of setup] (primary) {Primary Node};
+        \node[rectangle,draw,minimum width=3cm,minimum height=1.5cm,below left=1cm of primary] (secondary1) {Secondary 1};
+        \node[rectangle,draw,minimum width=3cm,minimum height=1.5cm,below right=1cm of primary] (secondary2) {Secondary 2};
+        
+        % Network container
+        \node[rectangle,draw,dashed,fit=(setup) (primary) (secondary1) (secondary2),inner sep=0.5cm] (network) {};
+        \node[above] at (network.north) {ddbp\_mongo-network};
+        
+        % Connections
+        \draw[->,thick] (setup) -- (primary);
+        \draw[->,thick] (setup) -- (secondary1);
+        \draw[->,thick] (setup) -- (secondary2);
+        \draw[->,thick] (primary) -- (secondary1);
+        \draw[->,thick] (primary) -- (secondary2);
+    \end{tikzpicture}
+    \caption{Arquitectura de contenedores MongoDB con Replica Set}
+    \label{fig:mongodb-containers}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=2cm]
+        % Central MongoDB node
+        \node[rectangle,draw,minimum width=3cm,minimum height=2cm] (primary) {Primary Node\\(Priority 10)};
+        
+        % Secondary nodes
+        \node[rectangle,draw,minimum width=3cm,minimum height=2cm,below left=2cm of primary] (secondary1) {Secondary 1\\(Priority 5)};
+        \node[rectangle,draw,minimum width=3cm,minimum height=2cm,below right=2cm of primary] (secondary2) {Secondary 2\\(Priority 1)};
+        
+        % Application node
+        \node[rectangle,draw,minimum width=3cm,minimum height=1cm,above=2cm of primary] (app) {Rust Application};
+        
+        % Arrows for replication
+        \draw[->,thick] (primary) -- (secondary1) node[midway,left] {Replication};
+        \draw[->,thick] (primary) -- (secondary2) node[midway,right] {Replication};
+        
+        % Arrows for application communication
+        \draw[->,thick] (app) -- (primary) node[midway,right] {Writes};
+        \draw[->,thick,dashed] (app) -- (secondary1) node[midway,left] {Reads};
+        \draw[->,thick,dashed] (app) -- (secondary2) node[midway,right] {Reads};
+    \end{tikzpicture}
+    \caption{Arquitectura del ReplicaSet MongoDB con esquema de prioridad y flujo de datos}
+    \label{fig:replicaset-architecture}
+\end{figure}
+
+\subsubsection{Arquitectura de ReplicaSet y Priorización}
+La implementación del ReplicaSet en nuestra arquitectura sigue un esquema de priorización estratégica (10-5-1) que garantiza un comportamiento predecible durante las elecciones de nodo primario y la distribución de cargas de trabajo:
+
+\begin{itemize}
+    \item \textbf{Nodo Central (Prioridad 10)}: Configurado como el servidor preferido para el rol primario, este nodo tiene la prioridad más alta para garantizar estabilidad en condiciones normales de operación.
+    \item \textbf{Primer Nodo Secundario (Prioridad 5)}: Mantiene una prioridad intermedia, sirviendo como primer candidato de respaldo para asumir el rol primario en caso de fallo del nodo central.
+    \item \textbf{Segundo Nodo Secundario (Prioridad 1)}: Con la prioridad más baja, este nodo está diseñado principalmente para mantener redundancia y servir lecturas, asumiendo el rol primario solo en situaciones extremas.
+\end{itemize}
+
+La configuración del ReplicaSet se implementa mediante un script de inicialización automatizado:
+
+\begin{lstlisting}[language=javascript]
+rs.initiate({
+    _id: 'rs0',
+    members: [
+        { _id: 0, host: 'central-mongodb:27017', priority: 10 },
+        { _id: 1, host: 'secondary-mongodb-1:27017', priority: 5 },
+        { _id: 2, host: 'secondary-mongodb-2:27017', priority: 1 }
+    ]
+})
+\end{lstlisting}
+
+\paragraph{Proceso de Elección}
+El proceso de elección de nodo primario se rige por las siguientes reglas:
+
+\begin{enumerate}
+    \item Los nodos participan en una elección cuando:
+        \begin{itemize}
+            \item El nodo primario actual se vuelve inaccesible
+            \item Se produce un reinicio planificado del nodo primario
+            \item Se detecta una partición de red
+        \end{itemize}
+    \item El nodo con la prioridad más alta disponible gana la elección
+    \item Se requiere una mayoría de nodos (al menos 2 de 3) para completar una elección
+\end{enumerate}
+
+\subsubsection{Implementación de Seguridad}
+La seguridad del ReplicaSet se implementa mediante múltiples capas de protección:
+
+\paragraph{Autenticación por Keyfile}
+Los nodos del ReplicaSet utilizan un archivo de clave compartida para la autenticación interna:
+
+\begin{lstlisting}[language=yaml]
+command: mongod --replSet rs0 --keyFile /etc/mongo-keyfile --bind_ip_all --auth --port 27017
+volumes:
+    - ./mongo-keyfile:/etc/mongo-keyfile:ro
+\end{lstlisting}
+
+El keyfile se monta como volumen de solo lectura en cada contenedor, garantizando que solo los nodos autorizados puedan unirse al ReplicaSet.
+
+\paragraph{Control de Acceso Basado en Roles (RBAC)}
+Se implementa un esquema de RBAC que define roles específicos para diferentes tipos de operaciones:
+
+\begin{lstlisting}[language=javascript]
+db.createUser({
+    user: 'admin',
+    pwd: 'password',
+    roles: [
+        { role: 'readWrite', db: 'social_media_db' },
+        { role: 'dbAdmin', db: 'social_media_db' },
+        { role: 'userAdmin', db: 'social_media_db' }
+    ]
+});
+\end{lstlisting}
+
+\paragraph{Aislamiento de Red}
+Los contenedores operan en una red dedicada (ddbp_mongo-network) que proporciona:
+
+\begin{itemize}
+    \item Aislamiento del tráfico de base de datos
+    \item DNS interno para resolución de nombres entre contenedores
+    \item Control de acceso a nivel de red
+\end{itemize}
+
+\begin{lstlisting}[language=yaml]
+networks:
+    ddbp_mongo-network:
+        name: ddbp_mongo-network
+\end{lstlisting}
+
+\subsubsection{Proceso de Inicialización Automatizada}
+La inicialización del ReplicaSet se automatiza mediante un contenedor dedicado (mongo-setup) que ejecuta un script de configuración:
+
+\begin{enumerate}
+    \item \textbf{Verificación de Disponibilidad}: El script verifica que todos los nodos estén operativos antes de iniciar la configuración.
+    \item \textbf{Inicialización del ReplicaSet}: Se configura la topología del ReplicaSet con las prioridades correspondientes.
+    \item \textbf{Creación de Usuarios y Colecciones}: Se establecen los usuarios administrativos y las colecciones iniciales.
+    \item \textbf{Verificación de Estado}: Se confirma el correcto funcionamiento del ReplicaSet mediante pruebas de estado.
+\end{enumerate}
+
+El script de configuración incluye mecanismos de reintento y validación:
+
+\begin{lstlisting}[language=bash]
+#!/bin/bash
+check_mongodb_ready() {
+    local host=$1
+    echo "Checking if $host is ready..."
+    for i in {1..30}; do
+        if mongosh --host $host --port 27017 -u admin -p password \
+            --authenticationDatabase admin --eval "db.adminCommand('ping')" &>/dev/null; then
+            echo "$host is ready!"
+            return 0
+        fi
+        echo "Waiting for $host to be ready (attempt $i/30)..."
+        sleep 2
+    done
+    return 1
+}
+\end{lstlisting}
+
+Esta configuración automatizada garantiza una inicialización consistente y segura del clúster de MongoDB, estableciendo la base para operaciones distribuidas confiables.
+
+\subsubsection{Connection Pooling y Resiliencia}
+La aplicación implementa una configuración robusta para la conexión a MongoDB que garantiza alta disponibilidad, rendimiento óptimo y recuperación ante fallos:
+
+\paragraph{Pool de Conexiones}
+\begin{lstlisting}[language=rust]
+// Configurar connection pooling
+client_options.max_pool_size = Some(20);
+client_options.min_pool_size = Some(5);
+client_options.max_idle_time = Some(Duration::from_secs(60));
+\end{lstlisting}
+
+\begin{itemize}
+    \item \textbf{Max Pool Size}: Limita el número máximo de conexiones concurrentes a 20 para prevenir saturación.
+    \item \textbf{Min Pool Size}: Mantiene al menos 5 conexiones disponibles para minimizar latencia en solicitudes.
+    \item \textbf{Max Idle Time}: Cierra conexiones inactivas después de 60 segundos para optimizar recursos.
+\end{itemize}
+
+\paragraph{Configuración de Timeouts}
+\begin{lstlisting}[language=rust]
+// Configurar timeouts
+client_options.connect_timeout = Some(Duration::from_secs(10));
+client_options.server_selection_timeout = Some(Duration::from_secs(15));
+\end{lstlisting}
+
+\begin{itemize}
+    \item \textbf{Connect Timeout}: 10 segundos para establecer la conexión inicial.
+    \item \textbf{Server Selection Timeout}: 15 segundos para seleccionar un servidor disponible.
+\end{itemize}
+
+\paragraph{Configuración de Consistencia y Durabilidad}
+\begin{lstlisting}[language=rust]
+// Configurar read/write concerns para mejor fiabilidad
+client_options.read_concern = Some(ReadConcern::majority());
+client_options.write_concern = Some(
+    WriteConcern::builder()
+        .w(mongodb::options::Acknowledgment::Majority)
+        .build(),
+);
+\end{lstlisting}
+
+\begin{itemize}
+    \item \textbf{Read Concern}: Configurado como \texttt{majority} para garantizar que las lecturas devuelvan datos confirmados por la mayoría de nodos.
+    \item \textbf{Write Concern}: Configurado para requerir confirmación de la mayoría de nodos antes de considerar una escritura como exitosa.
+\end{itemize}
+
+\paragraph{Balanceo de Carga y Preferencia de Lectura}
+\begin{lstlisting}[language=rust]
+// Establecer preferencia de lectura a SecondaryPreferred
+let options = ReadPreferenceOptions::default();
+client_options.selection_criteria = Some(
+    ReadPreference::SecondaryPreferred {
+        options: Some(options),
+    }
+    .into(),
+);
+\end{lstlisting}
+
+\begin{itemize}
+    \item \textbf{Read Preference}: Configurado como \texttt{SecondaryPreferred} para dirigir operaciones de lectura a nodos secundarios cuando estén disponibles, descargando así al primario.
+\end{itemize}
+
+\paragraph{Políticas de Reintento y Monitoreo}
+\begin{lstlisting}[language=rust]
+// Configurar comportamiento de reintentos
+client_options.retry_reads = Some(true);
+client_options.retry_writes = Some(true);
+
+// Configurar heartbeat para detectar problemas rápidamente
+client_options.heartbeat_freq = Some(Duration::from_secs(15));
+\end{lstlisting}
+
+\begin{itemize}
+    \item \textbf{Retry Reads/Writes}: Habilitados para reintentar automáticamente operaciones fallidas.
+    \item \textbf{Heartbeat}: Configurado para verificar el estado de los servidores cada 15 segundos.
+\end{itemize}
+
+Esta configuración integral garantiza que la aplicación pueda manejar eficientemente situaciones como:
+\begin{itemize}
+    \item Fallos temporales de red
+    \item Caída de nodos individuales
+    \item Elecciones de nuevo primario
+    \item Picos de carga
+    \item Desconexiones transitorias
+\end{itemize}
+
+\subsection{Diagrama de Comunicación Rust}
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=2cm]
+        % Application Components
+        \node[rectangle,draw,minimum width=3cm,minimum height=1.5cm] (app) {Rust Application};
+        \node[rectangle,draw,minimum width=3cm,minimum height=1.5cm,below=2cm of app] (primary) {MongoDB Primary};
+        \node[rectangle,draw,minimum width=3cm,minimum height=1.5cm,below left=2cm of primary] (secondary1) {MongoDB Secondary 1};
+        \node[rectangle,draw,minimum width=3cm,minimum height=1.5cm,below right=2cm of primary] (secondary2) {MongoDB Secondary 2};
+        
+        % Connections with labels
+        \draw[->,thick] (app) -- (primary) node[midway,right] {Writes};
+        \draw[->,thick,dashed] (app) -- (secondary1) node[midway,left] {Reads};
+        \draw[->,thick,dashed] (app) -- (secondary2) node[midway,right] {Reads};
+        
+        % Replication arrows
+        \draw[->,thick] (primary) -- (secondary1) node[midway,left] {Sync};
+        \draw[->,thick] (primary) -- (secondary2) node[midway,right] {Sync};
+    \end{tikzpicture}
+    \caption{Diagrama de comunicación de la aplicación Rust con MongoDB ReplicaSet}
+    \label{fig:rust-communication}
+\end{figure}
+
+% 2. Descripción de Componentes
+\section{Descripción de Componentes}
+\subsection{Configuración de MongoDB}
+\subsubsection{Configuración del Replica Set}
+\subsubsection{Connection Pooling y Resiliencia}
+
+\subsection{Estructura de la Aplicación Rust}
+\subsubsection{API Endpoints y Funcionalidades}
+\subsubsection{Manejo de Errores y Responses}
+\subsubsection{Modelos de Datos}
+
+% 3. Modelos de Datos
+\section{Modelos de Datos}
+\subsection{Diseño de Colecciones}
+El sistema implementa un modelo de datos distribuido optimizado para operaciones sociales y escalabilidad horizontal. Las colecciones están diseñadas para maximizar la eficiencia en un entorno distribuido mientras mantienen la consistencia de los datos.
+
+\subsubsection{Colección de Usuarios}
+\begin{lstlisting}[language=json]
+{
+    "_id": ObjectId(),
+    "username": "string",         // Único, indexado
+    "email": "string",           // Único, indexado
+    "password_hash": "string",
+    "profile": {
+        "full_name": "string",
+        "bio": "string",
+        "avatar_url": "string",
+        "created_at": ISODate(),
+        "last_login": ISODate()
+    },
+    "followers_count": NumberInt, // Contador denormalizado
+    "following_count": NumberInt, // Contador denormalizado
+    "posts_count": NumberInt      // Contador denormalizado
+}
+\end{lstlisting}
+
+\paragraph{Índices y Optimización}
+\begin{itemize}
+    \item Índice único en \texttt{username}: \texttt{\{username: 1\}}
+    \item Índice único en \texttt{email}: \texttt{\{email: 1\}}
+    \item Índice compuesto para búsquedas: \texttt{\{username: 1, email: 1\}}
+\end{itemize}
+
+\subsubsection{Colección de Posts}
+\begin{lstlisting}[language=json]
+{
+    "_id": ObjectId(),
+    "user_id": ObjectId(),      // Referencia al autor
+    "content": "string",
+    "media_urls": ["string"],   // URLs de contenido multimedia
+    "created_at": ISODate(),
+    "likes_count": NumberInt,   // Contador denormalizado
+    "comments_count": NumberInt, // Contador denormalizado
+    "tags": ["string"],
+    "location": {
+        "type": "Point",
+        "coordinates": [NumberDouble, NumberDouble]
+    }
+}
+\end{lstlisting}
+
+\paragraph{Índices y Optimización}
+\begin{itemize}
+    \item Índice en \texttt{user\_id}: \texttt{\{user\_id: 1\}}
+    \item Índice en \texttt{created\_at}: \texttt{\{created\_at: -1\}}
+    \item Índice geoespacial: \texttt{\{location: "2dsphere"\}}
+    \item Índice de texto en contenido: \texttt{\{content: "text", tags: "text"\}}
+\end{itemize}
+
+\subsubsection{Colección de Comentarios}
+\begin{lstlisting}[language=json]
+{
+    "_id": ObjectId(),
+    "post_id": ObjectId(),        // Referencia al post
+    "user_id": ObjectId(),        // Referencia al autor
+    "content": "string",
+    "created_at": ISODate(),
+    "likes_count": NumberInt,     // Contador denormalizado
+    "parent_comment_id": ObjectId() // Para comentarios anidados
+}
+\end{lstlisting}
+
+\paragraph{Índices y Optimización}
+\begin{itemize}
+    \item Índice compuesto: \texttt{\{post\_id: 1, created\_at: -1\}}
+    \item Índice en \texttt{user\_id}: \texttt{\{user\_id: 1\}}
+    \item Índice en \texttt{parent\_comment\_id}: \texttt{\{parent\_comment\_id: 1\}}
+\end{itemize}
+
+\subsubsection{Colección de Likes}
+\begin{lstlisting}[language=json]
+{
+    "_id": ObjectId(),
+    "user_id": ObjectId(),
+    "target_id": ObjectId(),  // ID del post o comentario
+    "target_type": "string",  // "post" o "comment"
+    "created_at": ISODate()
+}
+\end{lstlisting}
+
+\subsubsection{Colección de Follows}
+\begin{lstlisting}[language=json]
+{
+    "_id": ObjectId(),
+    "follower_id": ObjectId(),
+    "following_id": ObjectId(),
+    "created_at": ISODate()
+}
+\end{lstlisting}
+
+\subsection{Estrategias de Modelado de Datos}
+
+\subsubsection{Denormalización Estratégica}
+El sistema implementa denormalización selectiva para optimizar las operaciones de lectura más comunes:
+
+\begin{itemize}
+    \item \textbf{Contadores Precalculados}: Mantenimiento de contadores en documentos de usuario para followers, following y posts.
+    \item \textbf{Feed Desnormalizado}: Almacenamiento de información frecuentemente accedida en la colección de feed.
+    \item \textbf{Información de Perfil Embebida}: Datos de perfil almacenados directamente en el documento de usuario.
+\end{itemize}
+
+\subsubsection{Gestión de Relaciones}
+Las relaciones entre entidades se manejan mediante referencias, optimizando para:
+
+\begin{itemize}
+    \item \textbf{Escalabilidad}: Las referencias permiten que los documentos crezcan independientemente.
+    \item \textbf{Flexibilidad}: Facilita la modificación de esquemas y la evolución de la aplicación.
+    \item \textbf{Consultas Eficientes}: Permite agregaciones y búsquedas optimizadas.
+\end{itemize}
+
+\subsection{Distribución de Datos}
+La distribución de datos en el ReplicaSet se optimiza para garantizar:
+
+\paragraph{Consistencia}
+\begin{itemize}
+    \item Escrituras confirmadas por mayoría de nodos
+    \item Lecturas consistentes desde secundarios
+    \item Manejo de conflictos mediante timestamps
+\end{itemize}
+
+\paragraph{Disponibilidad}
+\begin{itemize}
+    \item Replicación automática entre nodos
+    \item Failover transparente para aplicaciones cliente
+    \item Recuperación automática de nodos caídos
+\end{itemize}
+
+\paragraph{Particionamiento}
+Aunque el sistema actual utiliza un ReplicaSet sin sharding, está diseñado para facilitar la futura implementación de sharding horizontal:
+
+\begin{itemize}
+    \item Claves de documento distribuibles (\texttt{\_id})
+    \item Índices preparados para sharding
+    \item Modelo de datos compatible con distribución
+\end{itemize}
+
+\subsection{Estrategias de Indexación}
+La estrategia de indexación está diseñada para optimizar los patrones de acceso más comunes:
+
+\begin{itemize}
+    \item \textbf{Índices Únicos}: Garantizan la unicidad de usernames y emails
+    \item \textbf{Índices Compuestos}: Optimizan consultas multi-campo frecuentes
+    \item \textbf{Índices Geoespaciales}: Facilitan búsquedas basadas en ubicación
+    \item \textbf{Índices de Texto}: Permiten búsquedas eficientes en contenido
+\end{itemize}
+
+Esta estructura de datos distribuida proporciona una base sólida para las operaciones de la red social, permitiendo:
+
+\begin{itemize}
+    \item Escalabilidad horizontal futura
+    \item Alta disponibilidad de datos
+    \item Rendimiento optimizado para operaciones frecuentes
+    \item Flexibilidad para evolución del sistema
+\end{itemize}
+
+% 4. Endpoints de la API
+\section{Endpoints de la API}
+\subsection{Operaciones de Usuario}
+La API expone endpoints para gestionar operaciones relacionadas con usuarios:
+
+\subsubsection{Crear Usuario}
+\begin{lstlisting}[language=rust]
+POST /create_user
+Content-Type: application/json
+
+{
+    "username": "string",
+    "email": "string",
+    "password": "string",
+    "profile": {
+        "full_name": "string",
+        "bio": "string",
+        "avatar_url": "string"
+    }
+}
+\end{lstlisting}
+
+Este endpoint:
+\begin{itemize}
+    \item Valida datos de entrada
+    \item Verifica unicidad de username y email
+    \item Hashea la contraseña de forma segura
+    \item Crea el documento de usuario en MongoDB
+    \item Retorna el ID del usuario creado
+\end{itemize}
+
+\subsubsection{Perfiles de Usuario}
+\begin{lstlisting}[language=rust]
+GET /user/{user_id}
+
+Response:
+{
+    "user_id": "ObjectId",
+    "username": "string",
+    "profile": {
+        "full_name": "string",
+        "bio": "string",
+        "avatar_url": "string",
+        "created_at": "ISODate",
+        "last_login": "ISODate"
+    },
+    "stats": {
+        "followers_count": number,
+        "following_count": number,
+        "posts_count": number
+    }
+}
+\end{lstlisting}
+
+Funcionalidades:
+\begin{itemize}
+    \item Recuperación eficiente de perfiles
+    \item Proyección de campos según permisos
+    \item Caché de perfiles frecuentes
+    \item Estadísticas en tiempo real
+\end{itemize}
+
+\subsection{Interacciones Sociales}
+La API proporciona endpoints para gestionar las interacciones entre usuarios:
+
+\subsubsection{Crear Posts}
+\begin{lstlisting}[language=rust]
+POST /create_post
+Content-Type: application/json
+
+{
+    "user_id": "ObjectId",
+    "content": "string",
+    "media_urls": ["string"],
+    "tags": ["string"],
+    "location": {
+        "type": "Point",
+        "coordinates": [double, double]
+    }
+}
+\end{lstlisting}
+
+Características del endpoint:
+\begin{itemize}
+    \item Validación de usuario existente
+    \item Procesamiento de contenido multimedia
+    \item Actualización atómica de contadores
+    \item Indexación de contenido para búsqueda
+\end{itemize}
+
+\subsubsection{Funcionalidad de Comentarios}
+\begin{lstlisting}[language=rust]
+POST /create_comment
+Content-Type: application/json
+
+{
+    "post_id": "ObjectId",
+    "user_id": "ObjectId",
+    "content": "string",
+    "parent_comment_id": "ObjectId"  // Opcional
+}
+\end{lstlisting}
+
+El endpoint maneja:
+\begin{itemize}
+    \item Comentarios en posts
+    \item Respuestas a comentarios existentes
+    \item Actualización de contadores de comentarios
+    \item Notificaciones a usuarios relevantes
+\end{itemize}
+
+\subsubsection{Relaciones de Follow}
+\begin{lstlisting}[language=rust]
+POST /follow_user
+Content-Type: application/json
+
+{
+    "follower_id": "ObjectId",
+    "following_id": "ObjectId"
+}
+\end{lstlisting}
+
+Implementación:
+\begin{itemize}
+    \item Verificación de usuarios existentes
+    \item Validación de relación no duplicada
+    \item Actualización atómica de contadores
+    \item Generación de eventos de notificación
+\end{itemize}
+
+\subsection{Operaciones del Sistema}
+La API incluye endpoints para monitoreo y mantenimiento del sistema:
+
+\subsubsection{Implementación del Health Check}
+\begin{lstlisting}[language=rust]
+GET /health
+
+Response:
+{
+    "status": "Healthy",
+    "mongo_status": {
+        "primary": "connected",
+        "secondaries": ["connected", "connected"],
+        "replication_lag": [0, 1]
+    }
+}
+\end{lstlisting}
+
+El health check verifica:
+\begin{itemize}
+    \item Conectividad con MongoDB
+    \item Estado del ReplicaSet
+    \item Lag de replicación
+    \item Estado del pool de conexiones
+\end{itemize}
+
+\subsubsection{Población de Base de Datos para Testing}
+\begin{lstlisting}[language=rust]
+POST /test/populate
+Content-Type: application/json
+
+{
+    "users_count": number,
+    "posts_per_user": number,
+    "comments_per_post": number
+}
+\end{lstlisting}
+
+Funcionalidades:
+\begin{itemize}
+    \item Generación de datos de prueba realistas
+    \item Creación de relaciones entre entidades
+    \item Distribución estadística de interacciones
+    \item Verificación de integridad de datos
+\end{itemize}
+
+\subsubsection{Funcionalidad de Limpieza de Base de Datos}
+\begin{lstlisting}[language=rust]
+POST /test/clean
+
+Response:
+{
+    "status": "success",
+    "collections_cleaned": ["users", "posts", "comments", "likes", "follows"]
+}
+\end{lstlisting}
+
+El endpoint:
+\begin{itemize}
+    \item Limpia datos de prueba
+    \item Mantiene configuración del sistema
+    \item Verifica integridad post-limpieza
+    \item Registra operación en logs
+\end{itemize}
+
+Todos los endpoints implementan:
+\begin{itemize}
+    \item Manejo robusto de errores
+    \item Validación de entrada
+    \item Logging de operaciones
+    \item Métricas de rendimiento
+    \item Control de acceso basado en roles
+\end{itemize}
+% 5. Implementación Técnica
+\section{Implementación Técnica}
+\subsection{Error Handling}
+La implementación incluye un sistema robusto de manejo de errores que abarca múltiples niveles de la aplicación:
+
+\begin{lstlisting}[language=rust]
+#[derive(Debug)]
+pub enum AppError {
+    // Errores de Base de Datos
+    DatabaseError(mongodb::error::Error),
+    ConnectionError(String),
+    
+    // Errores de Validación
+    ValidationError(String),
+    DuplicateKeyError(String),
+    
+    // Errores de Negocio
+    NotFoundError(String),
+    UnauthorizedError(String),
+    
+    // Errores del Sistema
+    SystemError(String)
+}
+\end{lstlisting}
+
+\paragraph{Estrategias de Manejo}
+\begin{itemize}
+    \item \textbf{Propagación Controlada}: Los errores se propagan de manera controlada mediante Result
+    \item \textbf{Logging Estructurado}: Registro detallado de errores con contexto
+    \item \textbf{Recuperación Automática}: Reintentos automáticos para errores transitorios
+    \item \textbf{Respuestas HTTP}: Mapeo de errores a códigos HTTP apropiados
+\end{itemize}
+
+\subsection{State Management}
+La gestión del estado de la aplicación se maneja mediante una estructura AppState que encapsula recursos compartidos:
+
+\begin{lstlisting}[language=rust]
+pub struct AppState {
+    pub db: Database,
+    pub config: AppConfig,
+    pub metrics: Arc<Metrics>,
+}
+
+impl AppState {
+    pub async fn new(mongo_uri: &str, config: AppConfig) -> Result<Self, AppError> {
+        let client_options = ClientOptions::parse(mongo_uri).await?;
+        let client = Client::with_options(client_options)?;
+        let db = client.database("social_media_db");
+        
+        Ok(Self {
+            db,
+            config,
+            metrics: Arc::new(Metrics::new()),
+        })
+    }
+}
+\end{lstlisting}
+
+\paragraph{Características Principales}
+\begin{itemize}
+    \item \textbf{Estado Compartido}: Acceso thread-safe a recursos compartidos
+    \item \textbf{Configuración Centralizada}: Gestión unificada de configuración
+    \item \textbf{Métricas en Tiempo Real}: Recolección de métricas de rendimiento
+    \item \textbf{Conexión a Base de Datos}: Pool de conexiones administrado
+\end{itemize}
+
+\subsection{Conexión a Base de Datos y Resiliencia}
+La conexión a MongoDB se implementa con énfasis en la resiliencia y rendimiento:
+
+\begin{lstlisting}[language=rust]
+async fn setup_database(config: &Config) -> Result<Database, AppError> {
+    let mut client_options = ClientOptions::parse(&config.mongo_uri).await?;
+    
+    // Configuración de timeouts
+    client_options.connect_timeout = Some(Duration::from_secs(10));
+    client_options.server_selection_timeout = Some(Duration::from_secs(15));
+    
+    // Configuración de pool de conexiones
+    client_options.max_pool_size = Some(20);
+    client_options.min_pool_size = Some(5);
+    
+    // Configuración de consistencia
+    client_options.read_concern = Some(ReadConcern::majority());
+    client_options.write_concern = Some(
+        WriteConcern::builder()
+            .w(mongodb::options::Acknowledgment::Majority)
+            .build(),
+    );
+    
+    let client = Client::with_options(client_options)?;
+    Ok(client.database("social_media_db"))
+}
+\end{lstlisting}
+
+\subsection{Utilidades de Testing}
+El sistema incluye utilidades comprehensivas para testing:
+
+\begin{lstlisting}[language=rust]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    async fn setup_test_db() -> TestDatabase {
+        let mut options = ClientOptions::parse(TEST_MONGO_URI).await.unwrap();
+        options.app_name = Some("test".to_string());
+        
+        TestDatabase::new(options).await
+    }
+    
+    #[tokio::test]
+    async fn test_user_creation() {
+        let db = setup_test_db().await;
+        let user_data = NewUser {
+            username: "test_user",
+            email: "test@example.com",
+            password: "secure_password"
+        };
+        
+        let result = create_user(&db, user_data).await;
+        assert!(result.is_ok());
+    }
+}
+\end{lstlisting}
+
+\paragraph{Características del Testing}
+\begin{itemize}
+    \item \textbf{Base de Datos de Prueba}: Instancia dedicada para testing
+    \item \textbf{Fixtures Automatizados}: Generación de datos de prueba
+    \item \textbf{Limpieza Automática}: Restauración del estado inicial
+    \item \textbf{Tests de Integración}: Pruebas end-to-end con base de datos real
+\end{itemize}
+
+Esta implementación técnica asegura:
+\begin{itemize}
+    \item Alta calidad del código
+    \item Mantenibilidad a largo plazo
+    \item Facilidad de debugging
+    \item Confiabilidad del sistema
+\end{itemize}
+\section{Manejo de Consistencia y Durabilidad}
+\subsection{Configuración de Garantías de Consistencia}
+La arquitectura implementa un modelo de consistencia fuerte mediante configuraciones específicas que garantizan la durabilidad y consistencia de los datos en el entorno distribuido:
+
+\paragraph{Write Concern Mayoría}
+La configuración de write concern asegura que las operaciones de escritura sean confirmadas por la mayoría de los nodos:
+
+\begin{lstlisting}[language=rust]
+client_options.write_concern = Some(
+    WriteConcern::builder()
+        .w(mongodb::options::Acknowledgment::Majority)
+        .build(),
+);
+\end{lstlisting}
+
+Esta configuración proporciona:
+\begin{itemize}
+    \item Garantía de durabilidad ante fallos de nodos
+    \item Consistencia entre réplicas para operaciones posteriores
+    \item Protección contra pérdida de datos en escenarios de failover
+\end{itemize}
+
+\paragraph{Read Concern Mayoría}
+Las operaciones de lectura se configuran para garantizar consistencia:
+
+\begin{lstlisting}[language=rust]
+client_options.read_concern = Some(ReadConcern::majority());
+\end{lstlisting}
+
+Este nivel de read concern asegura:
+\begin{itemize}
+    \item Lecturas de datos confirmados por la mayoría de réplicas
+    \item Prevención de lecturas sucias (dirty reads)
+    \item Consistencia en operaciones distribuidas
+\end{itemize}
+
+\section{Configuración de Resiliencia}
+\subsection{Gestión de Timeouts}
+\paragraph{Timeouts Operacionales}
+\begin{lstlisting}[language=rust]
+client_options.connect_timeout = Some(Duration::from_secs(10));
+client_options.server_selection_timeout = Some(Duration::from_secs(15));
+client_options.max_idle_time = Some(Duration::from_secs(60));
+\end{lstlisting}
+
+Los timeouts se configuran para:
+\begin{itemize}
+    \item \textbf{Connect Timeout (10s)}: Límite para conexiones iniciales
+    \item \textbf{Server Selection (15s)}: Tiempo máximo para selección de servidor
+    \item \textbf{Max Idle Time (60s)}: Duración máxima de conexiones inactivas
+\end{itemize}
+
+\subsection{Políticas de Reintento}
+\begin{lstlisting}[language=rust]
+client_options.retry_reads = Some(true);
+client_options.retry_writes = Some(true);
+\end{lstlisting}
+
+Las operaciones elegibles para reintento incluyen:
+\begin{itemize}
+    \item Errores de red transitorios
+    \item Timeouts de operaciones
+    \item Errores de escritura no fatales
+    \item Reconexiones post-failover
+\end{itemize}
+
+\subsection{Monitoreo y Health Checks}
+\paragraph{Monitoreo de Base de Datos}
+\begin{lstlisting}[language=rust]
+client_options.heartbeat_freq = Some(Duration::from_secs(15));
+\end{lstlisting}
+
+La implementación incluye:
+\begin{itemize}
+    \item \textbf{Heartbeat}: Verificación periódica de nodos
+    \item \textbf{Métricas de Replicación}: Monitoreo de lag y sincronización
+    \item \textbf{Estadísticas Operacionales}: Seguimiento de latencia y throughput
+\end{itemize}
+
+\paragraph{Health Checks de Aplicación}
+\begin{lstlisting}[language=rust]
+async fn health_check_handler(
+    app_state: web::Data<AppState>
+) -> impl Responder {
+    match app_state.db.run_command(doc! {"ping": 1}, None).await {
+        Ok(_) => HttpResponse::Ok().json("Healthy"),
+        Err(e) => HttpResponse::ServiceUnavailable().json(e.to_string())
+    }
+}
+\end{lstlisting}
+
+El sistema implementa verificaciones de:
+\begin{itemize}
+    \item Conectividad a MongoDB
+    \item Estado del pool de conexiones
+    \item Métricas de rendimiento
+    \item Uso de recursos
+\end{itemize}
+
+\subsection{Balanceo de Carga}
+La aplicación implementa estrategias de balanceo en múltiples niveles:
+
+\paragraph{Nivel de Base de Datos}
+\begin{lstlisting}[language=rust]
+client_options.selection_criteria = Some(
+    ReadPreference::SecondaryPreferred {
+        options: Some(ReadPreferenceOptions::default()),
+    }
+    .into(),
+);
+\end{lstlisting}
+
+Características principales:
+\begin{itemize}
+    \item Distribución de lecturas entre secundarios
+    \item Escrituras centralizadas en primario
+    \item Failover automático
+\end{itemize}
+
+\paragraph{Nivel de Aplicación}
+\begin{itemize}
+    \item Connection pooling optimizado (5-20 conexiones)
+    \item Distribución de carga entre instancias
+    \item Caché local para datos frecuentes
+\end{itemize}
+
+\subsection{Error Handling}
+La aplicación implementa un manejo de errores multinivel:
+
+\begin{itemize}
+    \item \textbf{Errores de Conexión}: Problemas de red o disponibilidad
+    \item \textbf{Errores de Operación}: Fallos en operaciones específicas
+    \item \textbf{Errores de Aplicación}: Problemas de lógica de negocio
+    \item \textbf{Errores de Sistema}: Fallos de recursos o configuración
+\end{itemize}
+
+Estrategias de recuperación:
+\begin{itemize}
+    \item \textbf{Circuit Breaker}: Prevención de cascada de fallos
+    \item \textbf{Backoff Exponencial}: Reintento gradual
+    \item \textbf{Fallback}: Rutas alternativas para operaciones críticas
+    \item \textbf{Logging}: Registro detallado para análisis
+\end{itemize}
+
+\section{Conclusiones}
+La implementación del sistema de base de datos distribuida MongoDB para nuestra aplicación de red social demuestra una arquitectura robusta y escalable que cumple con los requisitos de alta disponibilidad, consistencia y rendimiento. Los aspectos más destacados de la implementación incluyen:
+
+\subsection{Arquitectura Distribuida}
+\begin{itemize}
+    \item Implementación exitosa de un ReplicaSet MongoDB con esquema de prioridad 10-5-1
+    \item Sistema de failover automático que garantiza continuidad operativa
+    \item Balanceo de carga efectivo entre nodos primario y secundarios
+    \item Aislamiento de red y seguridad mediante autenticación por keyfile
+\end{itemize}
+
+\subsection{Garantías de Datos}
+\begin{itemize}
+    \item Consistencia fuerte mediante write concern y read concern mayoritarios
+    \item Durabilidad asegurada por replicación síncrona entre nodos
+    \item Prevención de pérdida de datos mediante confirmación distribuida
+    \item Estrategias de de normalización optimizadas para lecturas frecuentes
+\end{itemize}
+
+\subsection{Resiliencia y Monitoreo}
+\begin{itemize}
+    \item Sistema robusto de manejo de errores y recuperación
+    \item Monitoreo continuo mediante heartbeats y health checks
+    \item Connection pooling optimizado para rendimiento sostenido
+    \item Políticas de reintento configuradas para operaciones críticas
+\end{itemize}
+
+\subsection{Escalabilidad}
+\begin{itemize}
+    \item Diseño preparado para futuro sharding horizontal
+    \item Modelo de datos optimizado para distribución
+    \item Índices estratégicos para consultas frecuentes
+    \item Arquitectura modular que facilita expansión
+\end{itemize}
+
+El sistema resultante proporciona una base sólida para las operaciones de la red social, con capacidad de crecimiento y adaptación a futuros requerimientos. La combinación de MongoDB como sistema de base de datos distribuida y Rust como lenguaje de implementación ha demostrado ser efectiva para crear una aplicación robusta y de alto rendimiento.
+
+Las decisiones arquitectónicas tomadas en términos de consistencia, disponibilidad y tolerancia a particiones (CAP) han priorizado la consistencia y disponibilidad, mientras se mantiene la capacidad de escalar horizontalmente cuando sea necesario. La implementación actual sienta las bases para futuras mejoras y optimizaciones según evolucionen los requerimientos del sistema.
+
+\end{document}
