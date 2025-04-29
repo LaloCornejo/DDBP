@@ -80,13 +80,61 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(_app_state.clone())
-            .route("/create_user", web::post().to(create_user_handler))
-            .route("/create_post", web::post().to(create_post_handler))
-            .route("/create_comment", web::post().to(create_comment_handler))
-            .route("/follow_user", web::post().to(follow_user_handler))
-            .route("/health", web::get().to(health_check_handler))
-            .route("/test/populate", web::post().to(populate_database_handler))
-            .route("/test/clean", web::post().to(clean_database_handler))
+            .route("/api/posts", web::get().to(handlers::get_posts_handler))
+            .route(
+                "/api/posts/{id}",
+                web::get().to(handlers::get_post_by_id_handler),
+            )
+            .route("/api/users", web::get().to(handlers::get_users_handler))
+            .route(
+                "/api/users/{id}",
+                web::get().to(handlers::get_user_by_id_handler),
+            )
+            .route(
+                "/api/comments",
+                web::get().to(handlers::get_comments_handler),
+            )
+            .route(
+                "/api/comments/{id}",
+                web::get().to(handlers::get_comment_by_id_handler),
+            )
+            .route(
+                "/api/comments/post/{post_id}",
+                web::get().to(handlers::get_comments_by_post_id_handler),
+            )
+            .route(
+                "/api/comments/user/{user_id}",
+                web::get().to(handlers::get_comments_by_user_id_handler),
+            )
+            .route(
+                "/api/users/following/{user_id}",
+                web::get().to(handlers::get_following_users_handler),
+            )
+            .route(
+                "/api/users/followers/{user_id}",
+                web::get().to(handlers::get_followers_users_handler),
+            )
+            .route(
+                "/api/users/posts/{user_id}",
+                web::get().to(handlers::get_posts_by_user_id_handler),
+            )
+            .route(
+                "/api/posts/comments/{post_id}",
+                web::get().to(handlers::get_comments_by_post_id_handler),
+            )
+            .route("/api/create_user", web::post().to(create_user_handler))
+            .route("/api/create_post", web::post().to(create_post_handler))
+            .route(
+                "/api/create_comment",
+                web::post().to(create_comment_handler),
+            )
+            .route("/api/follow_user", web::post().to(follow_user_handler))
+            .route("/api/health", web::get().to(health_check_handler))
+            .route(
+                "/api/test/populate",
+                web::post().to(populate_database_handler),
+            )
+            .route("/api/test/clean", web::post().to(clean_database_handler))
     })
     .bind((host, port))?
     .run()

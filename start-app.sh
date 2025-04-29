@@ -22,7 +22,7 @@ fi
 
 # Start containers
 echo "Starting containers..."
-podman compose up -d
+podman-compose up -d
 
 # Wait for MongoDB replica set to be fully initialized
 echo "Waiting for MongoDB replica set to initialize..."
