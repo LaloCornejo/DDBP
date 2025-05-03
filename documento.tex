@@ -90,7 +90,7 @@ Esta arquitectura proporciona:
     \item \textbf{Balanceo de lecturas}: Las operaciones de lectura pueden distribuirse entre los nodos secundarios.
 \end{itemize}
 
-La configuración se implementa mediante Docker Compose:
+La configuración se implementa mediante Podman Compose:
 
 \begin{lstlisting}[language=yaml]
 services:
@@ -143,6 +143,7 @@ services:
     depends_on:
       - central-mongodb
 \end{lstlisting}
+\small{Ruta: /docker-compose.yml - Configuración de contenedores MongoDB para ReplicaSet}
 
 El proceso de inicialización del Replica Set se maneja mediante un contenedor adicional que ejecuta un script para configurar los nodos como un conjunto replicado:
 
@@ -162,6 +163,7 @@ El proceso de inicialización del Replica Set se maneja mediante un contenedor a
       - ./setup-replica.sh:/setup-replica.sh:ro
     entrypoint: ["/bin/bash", "/setup-replica.sh"]
 \end{lstlisting}
+\small{Ruta: /docker-compose.yml - Configuración de contenedor de inicialización para MongoDB}
 
 \begin{figure}[H]
     \centering
@@ -234,6 +236,7 @@ rs.initiate({
     ]
 })
 \end{lstlisting}
+\small{Ruta: /setup-replica.sh - Configuración de ReplicaSet con esquema de prioridad}
 
 \paragraph{Proceso de Elección}
 El proceso de elección de nodo primario se rige por las siguientes reglas:
@@ -260,6 +263,7 @@ command: mongod --replSet rs0 --keyFile /etc/mongo-keyfile --bind_ip_all --auth 
 volumes:
     - ./mongo-keyfile:/etc/mongo-keyfile:ro
 \end{lstlisting}
+\small{Ruta: /docker-compose.yml - Configuración de seguridad con keyfile}
 
 El keyfile se monta como volumen de solo lectura en cada contenedor, garantizando que solo los nodos autorizados puedan unirse al ReplicaSet.
 
@@ -277,9 +281,10 @@ db.createUser({
     ]
 });
 \end{lstlisting}
+\small{Ruta: /setup-replica.sh - Configuración de control de acceso basado en roles}
 
 \paragraph{Aislamiento de Red}
-Los contenedores operan en una red dedicada (ddbp_mongo-network) que proporciona:
+Los contenedores operan en una red dedicada (ddbp\_mongo-network) que proporciona:
 
 \begin{itemize}
     \item Aislamiento del tráfico de base de datos
@@ -292,6 +297,7 @@ networks:
     ddbp_mongo-network:
         name: ddbp_mongo-network
 \end{lstlisting}
+\small{Ruta: /docker-compose.yml - Definición de red dedicada para MongoDB}
 
 \subsubsection{Proceso de Inicialización Automatizada}
 La inicialización del ReplicaSet se automatiza mediante un contenedor dedicado (mongo-setup) que ejecuta un script de configuración:
@@ -322,6 +328,7 @@ check_mongodb_ready() {
     return 1
 }
 \end{lstlisting}
+\small{Ruta: /setup-replica.sh - Script de verificación de disponibilidad de nodos MongoDB}
 
 Esta configuración automatizada garantiza una inicialización consistente y segura del clúster de MongoDB, estableciendo la base para operaciones distribuidas confiables.
 
@@ -335,6 +342,7 @@ client_options.max_pool_size = Some(20);
 client_options.min_pool_size = Some(5);
 client_options.max_idle_time = Some(Duration::from_secs(60));
 \end{lstlisting}
+\small{Ruta: /rust-app/src/config.rs - Configuración del pool de conexiones a MongoDB}
 
 \begin{itemize}
     \item \textbf{Max Pool Size}: Limita el número máximo de conexiones concurrentes a 20 para prevenir saturación.
@@ -348,6 +356,7 @@ client_options.max_idle_time = Some(Duration::from_secs(60));
 client_options.connect_timeout = Some(Duration::from_secs(10));
 client_options.server_selection_timeout = Some(Duration::from_secs(15));
 \end{lstlisting}
+\small{Ruta: /rust-app/src/config.rs - Configuración de timeouts para conexiones a MongoDB}
 
 \begin{itemize}
     \item \textbf{Connect Timeout}: 10 segundos para establecer la conexión inicial.
@@ -364,6 +373,7 @@ client_options.write_concern = Some(
         .build(),
 );
 \end{lstlisting}
+\small{Ruta: /rust-app/src/config.rs - Configuración de consistencia y durabilidad para operaciones de MongoDB}
 
 \begin{itemize}
     \item \textbf{Read Concern}: Configurado como \texttt{majority} para garantizar que las lecturas devuelvan datos confirmados por la mayoría de nodos.
@@ -381,6 +391,7 @@ client_options.selection_criteria = Some(
     .into(),
 );
 \end{lstlisting}
+\small{Ruta: /rust-app/src/config.rs - Configuración de preferencia de lectura para balanceo de carga}
 
 \begin{itemize}
     \item \textbf{Read Preference}: Configurado como \texttt{SecondaryPreferred} para dirigir operaciones de lectura a nodos secundarios cuando estén disponibles, descargando así al primario.
@@ -395,6 +406,7 @@ client_options.retry_writes = Some(true);
 // Configurar heartbeat para detectar problemas rápidamente
 client_options.heartbeat_freq = Some(Duration::from_secs(15));
 \end{lstlisting}
+\small{Ruta: /rust-app/src/config.rs - Configuración de políticas de reintento y monitoreo}
 
 \begin{itemize}
     \item \textbf{Retry Reads/Writes}: Habilitados para reintentar automáticamente operaciones fallidas.
@@ -433,8 +445,322 @@ Esta configuración integral garantiza que la aplicación pueda manejar eficient
     \label{fig:rust-communication}
 \end{figure}
 
-% 2. Descripción de Componentes
-\section{Descripción de Componentes}
+\section{Casos de Uso}
+El sistema de Red Social Distribuida basado en MongoDB implementa diversos casos de uso fundamentales que definen la interacción entre usuarios y el sistema. A continuación, se detallan los principales casos de uso organizados por categorías funcionales.
+
+\subsection{Autenticación y Gestión de Perfiles}
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=2cm]
+        % Actor
+        \node[draw, circle, minimum size=1.5cm] (user) {Usuario};
+        
+        % Use Cases
+        \node[draw, ellipse, right=2cm of user, minimum width=3cm, minimum height=1cm] (register) {Registro};
+        \node[draw, ellipse, right=2cm of user, below=0.8cm of register, minimum width=3cm, minimum height=1cm] (login) {Iniciar Sesión};
+        \node[draw, ellipse, right=2cm of user, below=0.8cm of login, minimum width=3cm, minimum height=1cm] (profile) {Editar Perfil};
+        \node[draw, ellipse, right=2cm of user, below=0.8cm of profile, minimum width=3cm, minimum height=1cm] (password) {Cambiar Contraseña};
+        
+        % Connections
+        \draw[-] (user) -- (register);
+        \draw[-] (user) -- (login);
+        \draw[-] (user) -- (profile);
+        \draw[-] (user) -- (password);
+    \end{tikzpicture}
+    \caption{Casos de uso: Autenticación y Gestión de Perfiles}
+    \label{fig:auth-use-cases}
+\end{figure}
+
+\paragraph{Descripción de Casos de Uso}
+\begin{itemize}
+    \item \textbf{Registro de Usuario}:
+    \begin{itemize}
+        \item \textbf{Actor}: Usuario no registrado
+        \item \textbf{Descripción}: El usuario proporciona nombre de usuario, correo electrónico y contraseña para crear una cuenta
+        \item \textbf{Flujo Principal}:
+        \begin{enumerate}
+            \item El usuario ingresa datos personales
+            \item El sistema valida la unicidad del nombre de usuario y correo
+            \item El sistema almacena credenciales con contraseña hasheada
+            \item Se crea perfil de usuario vacío
+        \end{enumerate}
+        \item \textbf{Postcondición}: Cuenta creada y usuario autenticado
+    \end{itemize}
+    
+    \item \textbf{Inicio de Sesión}:
+    \begin{itemize}
+        \item \textbf{Actor}: Usuario registrado
+        \item \textbf{Descripción}: El usuario introduce credenciales para acceder
+        \item \textbf{Flujo Principal}:
+        \begin{enumerate}
+            \item Usuario ingresa nombre de usuario/email y contraseña
+            \item Sistema verifica credenciales contra la base de datos
+            \item Sistema genera token de autenticación
+        \end{enumerate}
+        \item \textbf{Postcondición}: Usuario autenticado y sesión iniciada
+    \end{itemize}
+    
+    \item \textbf{Edición de Perfil}:
+    \begin{itemize}
+        \item \textbf{Actor}: Usuario autenticado
+        \item \textbf{Descripción}: Modificación de información de perfil
+        \item \textbf{Flujo Principal}:
+        \begin{enumerate}
+            \item Usuario accede a sección de perfil
+            \item Modifica campos (bio, avatar, nombre completo)
+            \item Sistema valida y almacena cambios
+        \end{enumerate}
+        \item \textbf{Postcondición}: Perfil actualizado en la base de datos
+    \end{itemize}
+\end{itemize}
+
+\subsection{Gestión de Publicaciones}
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=2cm]
+        % Actor
+        \node[draw, circle, minimum size=1.5cm] (user) {Usuario};
+        
+        % Use Cases
+        \node[draw, ellipse, right=2cm of user, minimum width=3cm, minimum height=1cm] (create) {Crear Post};
+        \node[draw, ellipse, right=2cm of user, below=0.8cm of create, minimum width=3cm, minimum height=1cm] (view) {Ver Post};
+        \node[draw, ellipse, right=2cm of user, below=0.8cm of view, minimum width=3cm, minimum height=1cm] (delete) {Eliminar Post};
+        \node[draw, ellipse, right=2cm of user, below=0.8cm of delete, minimum width=3cm, minimum height=1cm] (edit) {Editar Post};
+        
+        % Connections
+        \draw[-] (user) -- (create);
+        \draw[-] (user) -- (view);
+        \draw[-] (user) -- (delete);
+        \draw[-] (user) -- (edit);
+    \end{tikzpicture}
+    \caption{Casos de uso: Gestión de Publicaciones}
+    \label{fig:post-use-cases}
+\end{figure}
+
+\paragraph{Descripción de Casos de Uso}
+\begin{itemize}
+    \item \textbf{Crear Publicación}:
+    \begin{itemize}
+        \item \textbf{Actor}: Usuario autenticado
+        \item \textbf{Descripción}: Creación de nueva publicación con contenido
+        \item \textbf{Flujo Principal}:
+        \begin{enumerate}
+            \item Usuario redacta contenido textual
+            \item Opcionalmente adjunta medios (imágenes, videos)
+            \item Opcionalmente agrega etiquetas y ubicación
+            \item Sistema almacena publicación y actualiza contadores
+        \end{enumerate}
+        \item \textbf{Postcondición}: Publicación visible para seguidores
+    \end{itemize}
+    
+    \item \textbf{Ver Publicación}:
+    \begin{itemize}
+        \item \textbf{Actor}: Usuario (autenticado o no)
+        \item \textbf{Descripción}: Visualización de una publicación específica
+        \item \textbf{Flujo Principal}:
+        \begin{enumerate}
+            \item Usuario accede a publicación mediante enlace o feed
+            \item Sistema recupera publicación con comentarios asociados
+            \item Se muestra contenido completo e interacciones
+        \end{enumerate}
+        \item \textbf{Postcondición}: Publicación visualizada con estadísticas actualizadas
+    \end{itemize}
+    
+    \item \textbf{Eliminar Publicación}:
+    \begin{itemize}
+        \item \textbf{Actor}: Usuario autenticado (propietario)
+        \item \textbf{Descripción}: Eliminación permanente de una publicación
+        \item \textbf{Flujo Principal}:
+        \begin{enumerate}
+            \item Usuario selecciona opción eliminar en su publicación
+            \item Sistema solicita confirmación
+            \item Sistema elimina publicación y actualiza contadores
+        \end{enumerate}
+        \item \textbf{Postcondición}: Publicación eliminada y referencias actualizadas
+    \end{itemize}
+\end{itemize}
+
+\subsection{Interacciones Sociales}
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=2cm]
+        % Actor
+        \node[draw, circle, minimum size=1.5cm] (user) {Usuario};
+        
+        % Use Cases
+        \node[draw, ellipse, right=2cm of user, minimum width=3cm, minimum height=1cm] (follow) {Seguir Usuario};
+        \node[draw, ellipse, right=2cm of user, below=0.8cm of follow, minimum width=3cm, minimum height=1cm] (like) {Dar Like};
+        \node[draw, ellipse, right=2cm of user, below=0.8cm of like, minimum width=3cm, minimum height=1cm] (comment) {Comentar};
+        \node[draw, ellipse, right=2cm of user, below=0.8cm of comment, minimum width=3cm, minimum height=1cm] (share) {Compartir Post};
+        
+        % Connections
+        \draw[-] (user) -- (follow);
+        \draw[-] (user) -- (like);
+        \draw[-] (user) -- (comment);
+        \draw[-] (user) -- (share);
+    \end{tikzpicture}
+    \caption{Casos de uso: Interacciones Sociales}
+    \label{fig:social-use-cases}
+\end{figure}
+
+\paragraph{Descripción de Casos de Uso}
+\begin{itemize}
+    \item \textbf{Seguir Usuario}:
+    \begin{itemize}
+        \item \textbf{Actor}: Usuario autenticado
+        \item \textbf{Descripción}: Establecer relación de seguimiento
+        \item \textbf{Flujo Principal}:
+        \begin{enumerate}
+            \item Usuario visita perfil de otro usuario
+            \item Usuario selecciona opción "Seguir"
+            \item Sistema registra relación en colección de follows
+            \item Contadores de ambos usuarios son actualizados
+        \end{enumerate}
+        \item \textbf{Postcondición}: Relación establecida y contadores actualizados
+    \end{itemize}
+    
+    \item \textbf{Dar Like}:
+    \begin{itemize}
+        \item \textbf{Actor}: Usuario autenticado
+        \item \textbf{Descripción}: Interacción positiva con publicación
+        \item \textbf{Flujo Principal}:
+        \begin{enumerate}
+            \item Usuario visualiza publicación
+            \item Usuario selecciona opción "Me gusta"
+            \item Sistema registra interacción y actualiza contador
+        \end{enumerate}
+        \item \textbf{Postcondición}: Like registrado y contador actualizado
+    \end{itemize}
+    
+    \item \textbf{Comentar}:
+    \begin{itemize}
+        \item \textbf{Actor}: Usuario autenticado
+        \item \textbf{Descripción}: Añadir comentario a publicación
+        \item \textbf{Flujo Principal}:
+        \begin{enumerate}
+            \item Usuario visualiza publicación
+            \item Usuario redacta comentario
+            \item Sistema almacena comentario asociado a la publicación
+            \item Contador de comentarios se actualiza
+        \end{enumerate}
+        \item \textbf{Postcondición}: Comentario visible y contador actualizado
+    \end{itemize}
+\end{itemize}
+
+\subsection{Gestión de Feed}
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=2cm]
+        % Actor
+        \node[draw, circle, minimum size=1.5cm] (user) {Usuario};
+        
+        % Use Cases
+        \node[draw, ellipse, right=2cm of user, minimum width=3cm, minimum height=1cm] (timeline) {Ver Timeline};
+        \node[draw, ellipse, right=2cm of user, below=0.8cm of timeline, minimum width=3cm, minimum height=1cm] (discover) {Descubrir Contenido};
+        \node[draw, ellipse, right=2cm of user, below=0.8cm of discover, minimum width=3cm, minimum height=1cm] (search) {Buscar Contenido};
+        
+        % Connections
+        \draw[-] (user) -- (timeline);
+        \draw[-] (user) -- (discover);
+        \draw[-] (user) -- (search);
+    \end{tikzpicture}
+    \caption{Casos de uso: Gestión de Feed}
+    \label{fig:feed-use-cases}
+\end{figure}
+
+\paragraph{Descripción de Casos de Uso}
+\begin{itemize}
+    \item \textbf{Ver Timeline}:
+    \begin{itemize}
+        \item \textbf{Actor}: Usuario autenticado
+        \item \textbf{Descripción}: Visualización de publicaciones recientes de usuarios seguidos
+        \item \textbf{Flujo Principal}:
+        \begin{enumerate}
+            \item Usuario accede a la página principal
+            \item Sistema recupera publicaciones de usuarios seguidos
+            \item Sistema ordena publicaciones cronológicamente
+            \item Se muestra feed personalizado
+        \end{enumerate}
+        \item \textbf{Postcondición}: Feed actualizado visualizado
+    \end{itemize}
+    
+    \item \textbf{Descubrir Contenido}:
+    \begin{itemize}
+        \item \textbf{Actor}: Usuario autenticado
+        \item \textbf{Descripción}: Exploración de contenido popular o recomendado
+        \item \textbf{Flujo Principal}:
+        \begin{enumerate}
+            \item Usuario accede a sección "Descubrir"
+            \item Sistema selecciona contenido popular o relevante
+            \item Se presenta contenido de usuarios no seguidos
+        \end{enumerate}
+        \item \textbf{Postcondición}: Usuario expuesto a nuevo contenido
+    \end{itemize}
+    
+    \item \textbf{Buscar Contenido}:
+    \begin{itemize}
+        \item \textbf{Actor}: Usuario
+        \item \textbf{Descripción}: Búsqueda por términos específicos
+        \item \textbf{Flujo Principal}:
+        \begin{enumerate}
+            \item Usuario ingresa términos de búsqueda
+            \item Sistema busca en publicaciones, perfiles y etiquetas
+            \item Resultados mostrados por relevancia
+        \end{enumerate}
+        \item \textbf{Postcondición}: Resultados relevantes presentados al usuario
+    \end{itemize}
+\end{itemize}
+
+\section{Stack Tecnológico}
+El sistema de Red Social Distribuida se construye sobre una arquitectura moderna compuesta por múltiples tecnologías integradas, cada una seleccionada por sus fortalezas específicas que contribuyen al rendimiento, escalabilidad y mantenibilidad del sistema.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=1.5cm]
+        % Define the layers
+        \node[rectangle, minimum width=12cm, minimum height=1.5cm, fill=blue!20, draw] (ui) {Frontend (?)};
+        
+        \node[rectangle, minimum width=12cm, minimum height=1.5cm, fill=green!20, draw, below=0.5cm of ui] (api) {API Gateway (Actix Web)};
+        
+        \node[rectangle, minimum width=12cm, minimum height=1.5cm, fill=orange!20, draw, below=0.5cm of api] (app) {Aplicación Backend (Rust)};
+        
+        \node[rectangle, minimum width=12cm, minimum height=1.5cm, fill=red!20, draw, below=0.5cm of app] (db) {Base de Datos (MongoDB ReplicaSet)};
+        
+        \node[rectangle, minimum width=12cm, minimum height=1.5cm, fill=gray!20, draw, below=0.5cm of db] (infra) {Infraestructura (Podman/Docker Compose)};
+        
+        % Connect the layers
+        \draw[-stealth, thick] (ui) -- (api);
+        \draw[-stealth, thick] (api) -- (app);
+        \draw[-stealth, thick] (app) -- (db);
+        \draw[-stealth, thick] (db) -- (infra);
+        
+        % Add labels to the sides
+        \node[right=0.5cm of ui, align=left] {Interfaz de usuario};
+        \node[right=0.5cm of api, align=left] {Ruteo y manejo de peticiones HTTP};
+        \node[right=0.5cm of app, align=left] {Lógica de negocio y servicios};
+        \node[right=0.5cm of db, align=left] {Persistencia de datos distribuida};
+        \node[right=0.5cm of infra, align=left] {Orquestación de contenedores};
+    \end{tikzpicture}
+    \caption{Arquitectura de capas del stack tecnológico}
+    \label{fig:tech-stack-layers}
+\end{figure}
+
+\subsection{Componentes del Stack Tecnológico}
+
+\subsubsection{Lenguajes y Frameworks}
+
+\begin{itemize}
+    \item \textbf{Rust}: Lenguaje de programación de alto rendimiento y seguridad de memoria utilizado para el desarrollo del backend.
+    \item \textbf{Actix Web}: Framework asíncrono para Rust que permite construir aplicaciones web rápidas y eficientes.
+    \item \textbf{MongoDB}: Base de datos NoSQL orientada a documentos, utilizada para almacenar datos de manera flexible y escalable.
+    \item \textbf{Podman}: Plataforma de contenedorización que permite empaquetar aplicaciones y sus dependencias en contenedores ligeros.
+    \item \textbf{Podman Compose}: Herramienta para definir y ejecutar aplicaciones multicontenedor, facilitando la orquestación de servicios.
+    \item \textbf{Tokio}: Runtime asíncrono para Rust que permite la ejecución eficiente de operaciones de entrada/salida.
+    \item \textbf{Serde}: Biblioteca de serialización/deserialización para Rust, utilizada para convertir estructuras de datos a y desde JSON.
+    \item \textbf{Yaak}: Herramiento para testear las APIs de Actix Web, permitiendo visualizar y manejar las peticiones y respuestas de manera sencilla.
+
+\end{itemize}
+
 \subsection{Configuración de MongoDB}
 \subsubsection{Configuración del Replica Set}
 \subsubsection{Connection Pooling y Resiliencia}
@@ -835,6 +1161,7 @@ pub enum AppError {
     SystemError(String)
 }
 \end{lstlisting}
+\small{Ruta: /rust-app/src/error.rs - Enumeración de errores para manejo centralizado de excepciones}
 
 \paragraph{Estrategias de Manejo}
 \begin{itemize}
@@ -868,6 +1195,7 @@ impl AppState {
     }
 }
 \end{lstlisting}
+\small{Ruta: /rust-app/src/state.rs - Implementación del estado de la aplicación y gestión de recursos compartidos}
 
 \paragraph{Características Principales}
 \begin{itemize}
@@ -904,36 +1232,7 @@ async fn setup_database(config: &Config) -> Result<Database, AppError> {
     Ok(client.database("social_media_db"))
 }
 \end{lstlisting}
-
-\subsection{Utilidades de Testing}
-El sistema incluye utilidades comprehensivas para testing:
-
-\begin{lstlisting}[language=rust]
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    async fn setup_test_db() -> TestDatabase {
-        let mut options = ClientOptions::parse(TEST_MONGO_URI).await.unwrap();
-        options.app_name = Some("test".to_string());
-        
-        TestDatabase::new(options).await
-    }
-    
-    #[tokio::test]
-    async fn test_user_creation() {
-        let db = setup_test_db().await;
-        let user_data = NewUser {
-            username: "test_user",
-            email: "test@example.com",
-            password: "secure_password"
-        };
-        
-        let result = create_user(&db, user_data).await;
-        assert!(result.is_ok());
-    }
-}
-\end{lstlisting}
+\small{Ruta: /rust-app/src/main.rs - Configuración y conexión a la base de datos MongoDB}
 
 \paragraph{Características del Testing}
 \begin{itemize}
@@ -964,6 +1263,7 @@ client_options.write_concern = Some(
         .build(),
 );
 \end{lstlisting}
+\small{Ruta: /rust-app/src/config.rs - Configuración de garantías de escritura para durabilidad}
 
 Esta configuración proporciona:
 \begin{itemize}
@@ -978,6 +1278,7 @@ Las operaciones de lectura se configuran para garantizar consistencia:
 \begin{lstlisting}[language=rust]
 client_options.read_concern = Some(ReadConcern::majority());
 \end{lstlisting}
+\small{Ruta: /rust-app/src/config.rs - Configuración de garantías de lectura para consistencia}
 
 Este nivel de read concern asegura:
 \begin{itemize}
@@ -994,6 +1295,7 @@ client_options.connect_timeout = Some(Duration::from_secs(10));
 client_options.server_selection_timeout = Some(Duration::from_secs(15));
 client_options.max_idle_time = Some(Duration::from_secs(60));
 \end{lstlisting}
+\small{Ruta: /rust-app/src/config.rs - Configuración de timeouts operacionales para resiliencia}
 
 Los timeouts se configuran para:
 \begin{itemize}
@@ -1007,6 +1309,7 @@ Los timeouts se configuran para:
 client_options.retry_reads = Some(true);
 client_options.retry_writes = Some(true);
 \end{lstlisting}
+\small{Ruta: /rust-app/src/config.rs - Configuración de políticas de reintento para operaciones}
 
 Las operaciones elegibles para reintento incluyen:
 \begin{itemize}
@@ -1021,6 +1324,7 @@ Las operaciones elegibles para reintento incluyen:
 \begin{lstlisting}[language=rust]
 client_options.heartbeat_freq = Some(Duration::from_secs(15));
 \end{lstlisting}
+\small{Ruta: /rust-app/src/config.rs - Configuración de frecuencia de heartbeat para monitoreo}
 
 La implementación incluye:
 \begin{itemize}
@@ -1040,6 +1344,7 @@ async fn health_check_handler(
     }
 }
 \end{lstlisting}
+\small{Ruta: /rust-app/src/handlers.rs - Manejador de verificación de salud del sistema}
 
 El sistema implementa verificaciones de:
 \begin{itemize}
@@ -1061,6 +1366,7 @@ client_options.selection_criteria = Some(
     .into(),
 );
 \end{lstlisting}
+\small{Ruta: /rust-app/src/config.rs - Configuración de criterios de selección para balanceo de carga}
 
 Características principales:
 \begin{itemize}
