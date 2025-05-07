@@ -143,7 +143,7 @@ services:
     depends_on:
       - central-mongodb
 \end{lstlisting}
-\small{Ruta: /docker-compose.yml - Configuración de contenedores MongoDB para ReplicaSet}
+\textit{(Ruta: /docker-compose.yml - Configuración de contenedores MongoDB para ReplicaSet)}
 
 El proceso de inicialización del Replica Set se maneja mediante un contenedor adicional que ejecuta un script para configurar los nodos como un conjunto replicado:
 
@@ -163,7 +163,7 @@ El proceso de inicialización del Replica Set se maneja mediante un contenedor a
       - ./setup-replica.sh:/setup-replica.sh:ro
     entrypoint: ["/bin/bash", "/setup-replica.sh"]
 \end{lstlisting}
-\small{Ruta: /docker-compose.yml - Configuración de contenedor de inicialización para MongoDB}
+\textit{(Ruta: /docker-compose.yml - Configuración de contenedor de inicialización para MongoDB)}
 
 \begin{figure}[H]
     \centering
@@ -236,7 +236,7 @@ rs.initiate({
     ]
 })
 \end{lstlisting}
-\small{Ruta: /setup-replica.sh - Configuración de ReplicaSet con esquema de prioridad}
+\textit{(Ruta: /setup-replica.sh - Configuración de ReplicaSet con esquema de prioridad)}
 
 \paragraph{Proceso de Elección}
 El proceso de elección de nodo primario se rige por las siguientes reglas:
@@ -263,7 +263,7 @@ command: mongod --replSet rs0 --keyFile /etc/mongo-keyfile --bind_ip_all --auth 
 volumes:
     - ./mongo-keyfile:/etc/mongo-keyfile:ro
 \end{lstlisting}
-\small{Ruta: /docker-compose.yml - Configuración de seguridad con keyfile}
+\textit{(Ruta: /docker-compose.yml - Configuración de seguridad con keyfile)}
 
 El keyfile se monta como volumen de solo lectura en cada contenedor, garantizando que solo los nodos autorizados puedan unirse al ReplicaSet.
 
@@ -281,7 +281,7 @@ db.createUser({
     ]
 });
 \end{lstlisting}
-\small{Ruta: /setup-replica.sh - Configuración de control de acceso basado en roles}
+\textit{(Ruta: /setup-replica.sh - Configuración de control de acceso basado en roles)}
 
 \paragraph{Aislamiento de Red}
 Los contenedores operan en una red dedicada (ddbp\_mongo-network) que proporciona:
@@ -297,7 +297,7 @@ networks:
     ddbp_mongo-network:
         name: ddbp_mongo-network
 \end{lstlisting}
-\small{Ruta: /docker-compose.yml - Definición de red dedicada para MongoDB}
+\textit{(Ruta: /docker-compose.yml - Definición de red dedicada para MongoDB)}
 
 \subsubsection{Proceso de Inicialización Automatizada}
 La inicialización del ReplicaSet se automatiza mediante un contenedor dedicado (mongo-setup) que ejecuta un script de configuración:
@@ -328,7 +328,7 @@ check_mongodb_ready() {
     return 1
 }
 \end{lstlisting}
-\small{Ruta: /setup-replica.sh - Script de verificación de disponibilidad de nodos MongoDB}
+\textit{(Ruta: /setup-replica.sh - Script de verificación de disponibilidad de nodos MongoDB)}
 
 Esta configuración automatizada garantiza una inicialización consistente y segura del clúster de MongoDB, estableciendo la base para operaciones distribuidas confiables.
 
@@ -342,7 +342,7 @@ client_options.max_pool_size = Some(20);
 client_options.min_pool_size = Some(5);
 client_options.max_idle_time = Some(Duration::from_secs(60));
 \end{lstlisting}
-\small{Ruta: /rust-app/src/config.rs - Configuración del pool de conexiones a MongoDB}
+\textit{(Ruta: /rust-app/src/config.rs - Configuración del pool de conexiones a MongoDB)}
 
 \begin{itemize}
     \item \textbf{Max Pool Size}: Limita el número máximo de conexiones concurrentes a 20 para prevenir saturación.
@@ -356,7 +356,7 @@ client_options.max_idle_time = Some(Duration::from_secs(60));
 client_options.connect_timeout = Some(Duration::from_secs(10));
 client_options.server_selection_timeout = Some(Duration::from_secs(15));
 \end{lstlisting}
-\small{Ruta: /rust-app/src/config.rs - Configuración de timeouts para conexiones a MongoDB}
+\textit{(Ruta: /rust-app/src/config.rs - Configuración de timeouts para conexiones a MongoDB)}
 
 \begin{itemize}
     \item \textbf{Connect Timeout}: 10 segundos para establecer la conexión inicial.
@@ -373,7 +373,7 @@ client_options.write_concern = Some(
         .build(),
 );
 \end{lstlisting}
-\small{Ruta: /rust-app/src/config.rs - Configuración de consistencia y durabilidad para operaciones de MongoDB}
+\textit{(Ruta: /rust-app/src/config.rs - Configuración de consistencia y durabilidad para operaciones de MongoDB)}
 
 \begin{itemize}
     \item \textbf{Read Concern}: Configurado como \texttt{majority} para garantizar que las lecturas devuelvan datos confirmados por la mayoría de nodos.
@@ -391,7 +391,7 @@ client_options.selection_criteria = Some(
     .into(),
 );
 \end{lstlisting}
-\small{Ruta: /rust-app/src/config.rs - Configuración de preferencia de lectura para balanceo de carga}
+\textit{(Ruta: /rust-app/src/config.rs - Configuración de preferencia de lectura para balanceo de carga)}
 
 \begin{itemize}
     \item \textbf{Read Preference}: Configurado como \texttt{SecondaryPreferred} para dirigir operaciones de lectura a nodos secundarios cuando estén disponibles, descargando así al primario.
@@ -406,7 +406,7 @@ client_options.retry_writes = Some(true);
 // Configurar heartbeat para detectar problemas rápidamente
 client_options.heartbeat_freq = Some(Duration::from_secs(15));
 \end{lstlisting}
-\small{Ruta: /rust-app/src/config.rs - Configuración de políticas de reintento y monitoreo}
+\textit{(Ruta: /rust-app/src/config.rs - Configuración de políticas de reintento y monitoreo)}
 
 \begin{itemize}
     \item \textbf{Retry Reads/Writes}: Habilitados para reintentar automáticamente operaciones fallidas.
@@ -760,10 +760,6 @@ El sistema de Red Social Distribuida se construye sobre una arquitectura moderna
     \item \textbf{Yaak}: Herramiento para testear las APIs de Actix Web, permitiendo visualizar y manejar las peticiones y respuestas de manera sencilla.
 
 \end{itemize}
-
-\subsection{Configuración de MongoDB}
-\subsubsection{Configuración del Replica Set}
-\subsubsection{Connection Pooling y Resiliencia}
 
 \subsection{Estructura de la Aplicación Rust}
 \subsubsection{API Endpoints y Funcionalidades}
@@ -1161,7 +1157,7 @@ pub enum AppError {
     SystemError(String)
 }
 \end{lstlisting}
-\small{Ruta: /rust-app/src/error.rs - Enumeración de errores para manejo centralizado de excepciones}
+\textit{(Ruta: /rust-app/src/error.rs - Enumeración de errores para manejo centralizado de excepciones)}
 
 \paragraph{Estrategias de Manejo}
 \begin{itemize}
@@ -1195,7 +1191,7 @@ impl AppState {
     }
 }
 \end{lstlisting}
-\small{Ruta: /rust-app/src/state.rs - Implementación del estado de la aplicación y gestión de recursos compartidos}
+\textit{(Ruta: /rust-app/src/state.rs - Implementación del estado de la aplicación y gestión de recursos compartidos)}
 
 \paragraph{Características Principales}
 \begin{itemize}
@@ -1232,7 +1228,7 @@ async fn setup_database(config: &Config) -> Result<Database, AppError> {
     Ok(client.database("social_media_db"))
 }
 \end{lstlisting}
-\small{Ruta: /rust-app/src/main.rs - Configuración y conexión a la base de datos MongoDB}
+\textit{(Ruta: /rust-app/src/main.rs - Configuración y conexión a la base de datos MongoDB)}
 
 \paragraph{Características del Testing}
 \begin{itemize}
@@ -1263,7 +1259,7 @@ client_options.write_concern = Some(
         .build(),
 );
 \end{lstlisting}
-\small{Ruta: /rust-app/src/config.rs - Configuración de garantías de escritura para durabilidad}
+\textit{(Ruta: /rust-app/src/config.rs - Configuración de garantías de escritura para durabilidad)}
 
 Esta configuración proporciona:
 \begin{itemize}
@@ -1278,7 +1274,7 @@ Las operaciones de lectura se configuran para garantizar consistencia:
 \begin{lstlisting}[language=rust]
 client_options.read_concern = Some(ReadConcern::majority());
 \end{lstlisting}
-\small{Ruta: /rust-app/src/config.rs - Configuración de garantías de lectura para consistencia}
+\textit{(Ruta: /rust-app/src/config.rs - Configuración de garantías de lectura para consistencia)}
 
 Este nivel de read concern asegura:
 \begin{itemize}
@@ -1295,7 +1291,7 @@ client_options.connect_timeout = Some(Duration::from_secs(10));
 client_options.server_selection_timeout = Some(Duration::from_secs(15));
 client_options.max_idle_time = Some(Duration::from_secs(60));
 \end{lstlisting}
-\small{Ruta: /rust-app/src/config.rs - Configuración de timeouts operacionales para resiliencia}
+\textit{(Ruta: /rust-app/src/config.rs - Configuración de timeouts operacionales para resiliencia)}
 
 Los timeouts se configuran para:
 \begin{itemize}
@@ -1309,7 +1305,7 @@ Los timeouts se configuran para:
 client_options.retry_reads = Some(true);
 client_options.retry_writes = Some(true);
 \end{lstlisting}
-\small{Ruta: /rust-app/src/config.rs - Configuración de políticas de reintento para operaciones}
+\textit{(Ruta: /rust-app/src/config.rs - Configuración de políticas de reintento para operaciones)}
 
 Las operaciones elegibles para reintento incluyen:
 \begin{itemize}
@@ -1324,7 +1320,7 @@ Las operaciones elegibles para reintento incluyen:
 \begin{lstlisting}[language=rust]
 client_options.heartbeat_freq = Some(Duration::from_secs(15));
 \end{lstlisting}
-\small{Ruta: /rust-app/src/config.rs - Configuración de frecuencia de heartbeat para monitoreo}
+\textit{(Ruta: /rust-app/src/config.rs - Configuración de frecuencia de heartbeat para monitoreo)}
 
 La implementación incluye:
 \begin{itemize}
@@ -1344,7 +1340,7 @@ async fn health_check_handler(
     }
 }
 \end{lstlisting}
-\small{Ruta: /rust-app/src/handlers.rs - Manejador de verificación de salud del sistema}
+\textit{(Ruta: /rust-app/src/handlers.rs - Manejador de verificación de salud del sistema)}
 
 El sistema implementa verificaciones de:
 \begin{itemize}
@@ -1366,7 +1362,7 @@ client_options.selection_criteria = Some(
     .into(),
 );
 \end{lstlisting}
-\small{Ruta: /rust-app/src/config.rs - Configuración de criterios de selección para balanceo de carga}
+\textit{(Ruta: /rust-app/src/config.rs - Configuración de criterios de selección para balanceo de carga)}
 
 Características principales:
 \begin{itemize}
