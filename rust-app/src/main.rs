@@ -33,9 +33,9 @@ async fn main() -> std::io::Result<()> {
 
     let host = env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
     let port = env::var("PORT")
-        .unwrap_or_else(|_| "8000".to_string())
+        .unwrap_or_else(|_| "8080".to_string())
         .parse::<u16>()
-        .unwrap_or(8000);
+        .unwrap_or(8080);
 
     // Configure MongoDB client options with better defaults for reliability
     let mut client_options = ClientOptions::parse(mongo_uri).await.unwrap();
@@ -82,6 +82,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(
                 Cors::default()
+                    .allowed_origin("http://localhost:3000")
                     .allowed_origin("http://localhost:5173")
                     .allowed_methods(vec!["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
                     .allowed_headers(vec!["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With", "Access-Control-Request-Method", "Access-Control-Request-Headers"])

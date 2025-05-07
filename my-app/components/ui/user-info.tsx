@@ -23,8 +23,8 @@ export function UserInfo({ user, className, followersCount, followingCount }: Us
     <Card className={cn("w-full", className)}>
       <CardHeader className="flex flex-row items-center gap-4 pb-2">
         <Avatar className="h-16 w-16">
-          <AvatarImage src={user.image} alt={user.name} />
-          <AvatarFallback>{user.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+          <AvatarImage src={user.image} alt={user.name || 'User'} />
+          <AvatarFallback>{user.name && user.name.trim() ? user.name.substring(0, 2).toUpperCase() : 'U'}</AvatarFallback>
         </Avatar>
         <div className="flex flex-col">
           <h2 className="text-2xl font-bold">{user.name}</h2>

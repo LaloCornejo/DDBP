@@ -273,8 +273,16 @@ fn generate_random_users(count: usize) -> Vec<mongodb::bson::Document> {
     ];
 
     let interests = vec![
-        "technology", "art", "music", "photography", "travel",
-        "food", "fitness", "gaming", "books", "nature",
+        "technology",
+        "art",
+        "music",
+        "photography",
+        "travel",
+        "food",
+        "fitness",
+        "gaming",
+        "books",
+        "nature",
     ];
 
     let mut users = Vec::new();
@@ -285,20 +293,26 @@ fn generate_random_users(count: usize) -> Vec<mongodb::bson::Document> {
         let number: u32 = rng.gen_range(1..1000);
         let username = format!("{}_{}", name, number);
         let email = format!("{}{}@example.com", name.to_lowercase(), number);
-        
+
         let bio_template = bio_templates.choose(&mut rng).unwrap();
         let interest = interests.choose(&mut rng).unwrap();
         let bio = bio_template.replace("{}", interest);
 
         let user_id = Uuid::new_v4().to_string();
-        
+
         users.push(doc! {
             "_id": &user_id,
             "username": &username,
             "email": &email,
             "password_hash": format!("hashed_password_{}", number),
             "bio": bio,
-            "profile_picture_url": format!("https://robohash.org/{}.png", username),
+            // Choose one of the following options:
+            
+            "profile_picture_url": format!("https://this-person-does-not-exist.xyz/new?gender={}&age={}", 
+                if rng.gen_bool(0.5) { "male" } else { "female" },
+                rng.gen_range(20..60)
+            ),
+        
             "join_date": current_time.to_rfc3339(),
             "follower_count": 0, // Will be updated after follows are generated
             "following_count": 0, // Will be updated after follows are generated
@@ -314,7 +328,7 @@ fn generate_random_users(count: usize) -> Vec<mongodb::bson::Document> {
 // Helper function to generate random posts with enhanced details
 fn generate_random_posts(user_ids: &[String], count: usize) -> Vec<mongodb::bson::Document> {
     let mut rng = rand::thread_rng();
-        let content_templates = vec![
+    let content_templates = vec![
         "Exploring the transformative power of {} and how it is reshaping industries, driving innovation, and creating new opportunities for growth and development. From its origins to its current applications, this post dives deep into the impact of {} on our world.",
         "The future of {} is here, and it's more exciting than ever. In this post, we examine the groundbreaking advancements in {} and their potential to revolutionize the way we live, work, and interact with technology.",
         "What makes {} such a game-changer? This post uncovers the key innovations, challenges, and opportunities that {} brings to the table, and why it is set to redefine the future of technology.",
@@ -332,9 +346,8 @@ fn generate_random_posts(user_ids: &[String], count: usize) -> Vec<mongodb::bson
         "A visionary look at the future of {}: what lies ahead for this technology, and how it could shape the next decade of innovation and progress.",
     ];
 
-    let mut rng = rand::thread_rng();
-    let titles = vec![
-        "The Future of AI",
+    let titles = vec![
+        "The Future of AI",
         "Blockchain Revolution",
         "Sustainable Living",
         "Digital Artistry",
@@ -347,9 +360,16 @@ fn generate_random_posts(user_ids: &[String], count: usize) -> Vec<mongodb::bson
     ];
 
     let topics = vec![
-        "AI", "blockchain", "sustainability", "digital art",
-        "remote work", "space exploration", "virtual reality",
-        "renewable energy", "quantum computing", "robotics",
+        "AI",
+        "blockchain",
+        "sustainability",
+        "digital art",
+        "remote work",
+        "space exploration",
+        "virtual reality",
+        "renewable energy",
+        "quantum computing",
+        "robotics",
     ];
 
     let post_types = vec![
@@ -368,10 +388,13 @@ fn generate_random_posts(user_ids: &[String], count: usize) -> Vec<mongodb::bson
         let topic = topics.choose(&mut rng).unwrap();
         let content = template.replace("{}", topic);
         let title = titles.choose(&mut rng).unwrap();
-        
+
         let post_type = post_types.choose(&mut rng).unwrap();
         let media_urls = match post_type {
-            PostType::Image => vec![format!("https://picsum.photos/seed/{}/800/600", Uuid::new_v4())],
+            PostType::Image => vec![format!(
+                "https://picsum.photos/seed/{}/800/600",
+                Uuid::new_v4()
+            )],
             PostType::Video => vec![format!("https://example.com/videos/{}.mp4", Uuid::new_v4())],
             PostType::Link => vec![format!("https://example.com/article/{}", Uuid::new_v4())],
             PostType::Text => Vec::new(),
@@ -400,7 +423,11 @@ fn generate_random_posts(user_ids: &[String], count: usize) -> Vec<mongodb::bson
 }
 
 // Helper function to generate random comments
-fn generate_random_comments(user_ids: &[String], post_ids: &[String], count: usize) -> Vec<Document> {
+fn generate_random_comments(
+    user_ids: &[String],
+    post_ids: &[String],
+    count: usize,
+) -> Vec<Document> {
     let mut rng = rand::thread_rng();
     let comment_texts = vec![
         "This is incredible!",
@@ -446,7 +473,7 @@ fn generate_random_likes(user_ids: &[String], post_ids: &[String], count: usize)
     while likes.len() < count {
         let user_id = user_ids.choose(&mut rng).unwrap();
         let post_id = post_ids.choose(&mut rng).unwrap();
-        
+
         // Ensure unique user-post combinations for likes
         let combination = format!("{}-{}", user_id, post_id);
         if seen_combinations.insert(combination) {
@@ -470,7 +497,7 @@ fn generate_random_follows(user_ids: &[String], count: usize) -> Vec<Document> {
     while follows.len() < count {
         let follower_id = user_ids.choose(&mut rng).unwrap();
         let following_id = user_ids.choose(&mut rng).unwrap();
-        
+
         // Avoid self-follows and duplicate relationships
         if follower_id != following_id {
             let combination = format!("{}-{}", follower_id, following_id);
@@ -501,7 +528,13 @@ pub async fn populate_database_handler(
     let follows_collection = state.db.collection::<Document>("follows");
 
     // Clean existing data first
-    for collection in [&users_collection, &posts_collection, &comments_collection, &likes_collection, &follows_collection] {
+    for collection in [
+        &users_collection,
+        &posts_collection,
+        &comments_collection,
+        &likes_collection,
+        &follows_collection,
+    ] {
         if let Err(e) = collection.delete_many(doc! {}).await {
             error!("Error cleaning collection: {}", e);
             return Err(AppError::from(e));
@@ -574,41 +607,59 @@ pub async fn populate_database_handler(
     // Update statistics for users and posts
     for user_id in &user_ids {
         // Count user statistics
-        let post_count = posts_collection.count_documents(doc! { "user_id": user_id }).await? as i32;
-        let follower_count = follows_collection.count_documents(doc! { "following_id": user_id }).await? as i32;
-        let following_count = follows_collection.count_documents(doc! { "follower_id": user_id }).await? as i32;
-        let comment_count = comments_collection.count_documents(doc! { "user_id": user_id }).await? as i32;
-        let likes_given = likes_collection.count_documents(doc! { "user_id": user_id }).await? as i32;
+        let post_count = posts_collection
+            .count_documents(doc! { "user_id": user_id })
+            .await? as i32;
+        let follower_count = follows_collection
+            .count_documents(doc! { "following_id": user_id })
+            .await? as i32;
+        let following_count = follows_collection
+            .count_documents(doc! { "follower_id": user_id })
+            .await? as i32;
+        let comment_count = comments_collection
+            .count_documents(doc! { "user_id": user_id })
+            .await? as i32;
+        let likes_given = likes_collection
+            .count_documents(doc! { "user_id": user_id })
+            .await? as i32;
 
         // Update user document
-        users_collection.update_one(
-            doc! { "_id": user_id },
-            doc! {
-                "$set": {
-                    "post_count": post_count,
-                    "follower_count": follower_count,
-                    "following_count": following_count,
-                    "comment_count": comment_count,
-                    "total_likes_given": likes_given,
-                }
-            }
-        ).await?;
+        users_collection
+            .update_one(
+                doc! { "_id": user_id },
+                doc! {
+                    "$set": {
+                        "post_count": post_count,
+                        "follower_count": follower_count,
+                        "following_count": following_count,
+                        "comment_count": comment_count,
+                        "total_likes_given": likes_given,
+                    }
+                },
+            )
+            .await?;
     }
 
     // Update statistics for posts
     for post_id in &post_ids {
-        let comment_count = comments_collection.count_documents(doc! { "post_id": post_id }).await? as i32;
-        let like_count = likes_collection.count_documents(doc! { "post_id": post_id }).await? as i32;
+        let comment_count = comments_collection
+            .count_documents(doc! { "post_id": post_id })
+            .await? as i32;
+        let like_count = likes_collection
+            .count_documents(doc! { "post_id": post_id })
+            .await? as i32;
 
-        posts_collection.update_one(
-            doc! { "_id": post_id },
-            doc! {
-                "$set": {
-                    "comment_count": comment_count,
-                    "like_count": like_count,
-                }
-            }
-        ).await?;
+        posts_collection
+            .update_one(
+                doc! { "_id": post_id },
+                doc! {
+                    "$set": {
+                        "comment_count": comment_count,
+                        "like_count": like_count,
+                    }
+                },
+            )
+            .await?;
     }
 
     Ok(HttpResponse::Ok().json(Response::<()> {
@@ -711,7 +762,10 @@ pub async fn get_post_by_id_handler(
         }
         Ok(None) => {
             error!("Post with ID {} not found", post_id);
-            Err(AppError::NotFound(format!("Post with ID {} not found", post_id)))
+            Err(AppError::NotFound(format!(
+                "Post with ID {} not found",
+                post_id
+            )))
         }
         Err(e) => {
             error!("Error fetching post: {}", e);
@@ -776,7 +830,10 @@ pub async fn get_user_by_id_handler(
         }
         Ok(None) => {
             error!("User with ID {} not found", user_id);
-            Err(AppError::NotFound(format!("User with ID {} not found", user_id)))
+            Err(AppError::NotFound(format!(
+                "User with ID {} not found",
+                user_id
+            )))
         }
         Err(e) => {
             error!("Error fetching user: {}", e);
@@ -841,7 +898,10 @@ pub async fn get_comment_by_id_handler(
         }
         Ok(None) => {
             error!("Comment with ID {} not found", comment_id);
-            Err(AppError::NotFound(format!("Comment with ID {} not found", comment_id)))
+            Err(AppError::NotFound(format!(
+                "Comment with ID {} not found",
+                comment_id
+            )))
         }
         Err(e) => {
             error!("Error fetching comment: {}", e);
@@ -882,10 +942,18 @@ pub async fn get_comments_by_post_id_handler(
         }
     }
 
-    info!("Successfully fetched {} comments for post {}", comments.len(), post_id);
+    info!(
+        "Successfully fetched {} comments for post {}",
+        comments.len(),
+        post_id
+    );
     Ok(HttpResponse::Ok().json(Response {
         status: "success".to_string(),
-        message: format!("Successfully fetched {} comments for post {}", comments.len(), post_id),
+        message: format!(
+            "Successfully fetched {} comments for post {}",
+            comments.len(),
+            post_id
+        ),
         data: Some(comments),
     }))
 }
@@ -922,10 +990,18 @@ pub async fn get_comments_by_user_id_handler(
         }
     }
 
-    info!("Successfully fetched {} comments by user {}", comments.len(), user_id);
+    info!(
+        "Successfully fetched {} comments by user {}",
+        comments.len(),
+        user_id
+    );
     Ok(HttpResponse::Ok().json(Response {
         status: "success".to_string(),
-        message: format!("Successfully fetched {} comments by user {}", comments.len(), user_id),
+        message: format!(
+            "Successfully fetched {} comments by user {}",
+            comments.len(),
+            user_id
+        ),
         data: Some(comments),
     }))
 }
@@ -956,7 +1032,10 @@ pub async fn get_following_users_handler(
                 // Extract the followed user ID and fetch their details from users collection
                 if let Ok(following_id) = document.get_str("following_id") {
                     let users_collection = state.db.collection::<Document>("users");
-                    if let Ok(Some(user_doc)) = users_collection.find_one(doc! { "_id": following_id }).await {
+                    if let Ok(Some(user_doc)) = users_collection
+                        .find_one(doc! { "_id": following_id })
+                        .await
+                    {
                         following_users.push(user_doc);
                     }
                 }
@@ -968,10 +1047,17 @@ pub async fn get_following_users_handler(
         }
     }
 
-    info!("Successfully fetched {} followed users for user {}", following_users.len(), user_id);
+    info!(
+        "Successfully fetched {} followed users for user {}",
+        following_users.len(),
+        user_id
+    );
     Ok(HttpResponse::Ok().json(Response {
         status: "success".to_string(),
-        message: format!("Successfully fetched {} followed users", following_users.len()),
+        message: format!(
+            "Successfully fetched {} followed users",
+            following_users.len()
+        ),
         data: Some(following_users),
     }))
 }
@@ -1002,7 +1088,9 @@ pub async fn get_followers_users_handler(
                 // Extract the follower ID and fetch their details from users collection
                 if let Ok(follower_id) = document.get_str("follower_id") {
                     let users_collection = state.db.collection::<Document>("users");
-                    if let Ok(Some(user_doc)) = users_collection.find_one(doc! { "_id": follower_id }).await {
+                    if let Ok(Some(user_doc)) =
+                        users_collection.find_one(doc! { "_id": follower_id }).await
+                    {
                         followers.push(user_doc);
                     }
                 }
@@ -1014,7 +1102,11 @@ pub async fn get_followers_users_handler(
         }
     }
 
-    info!("Successfully fetched {} followers for user {}", followers.len(), user_id);
+    info!(
+        "Successfully fetched {} followers for user {}",
+        followers.len(),
+        user_id
+    );
     Ok(HttpResponse::Ok().json(Response {
         status: "success".to_string(),
         message: format!("Successfully fetched {} followers", followers.len()),
@@ -1035,7 +1127,10 @@ pub async fn get_posts_by_user_id_handler(
     match users_collection.find_one(doc! { "_id": &user_id }).await {
         Ok(None) => {
             error!("User with ID {} not found", user_id);
-            return Err(AppError::NotFound(format!("User with ID {} not found", user_id)));
+            return Err(AppError::NotFound(format!(
+                "User with ID {} not found",
+                user_id
+            )));
         }
         Err(e) => {
             error!("Error verifying user existence: {}", e);
@@ -1068,10 +1163,18 @@ pub async fn get_posts_by_user_id_handler(
         }
     }
 
-    info!("Successfully fetched {} posts for user {}", posts.len(), user_id);
+    info!(
+        "Successfully fetched {} posts for user {}",
+        posts.len(),
+        user_id
+    );
     Ok(HttpResponse::Ok().json(Response {
         status: "success".to_string(),
-        message: format!("Successfully fetched {} posts for user {}", posts.len(), user_id),
+        message: format!(
+            "Successfully fetched {} posts for user {}",
+            posts.len(),
+            user_id
+        ),
         data: Some(posts),
     }))
 }

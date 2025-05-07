@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: PostPageProps) {
       title: `${post.title} - Social Feed`,
       description: post.content.substring(0, 160),
       type: "article",
-      authors: [post.authorId],
+      authors: [post.user_id],
       siteName: "Social Feed"
     }
   };
@@ -47,6 +47,22 @@ export default async function PostPage({ params }: PostPageProps) {
   
   const enrichedPost = await enrichPostWithDetails(post);
   
+  // Add console.log for debugging
+  console.log('Enriched Post:', JSON.stringify({
+    id: enrichedPost.id,
+    title: enrichedPost.title,
+    author: enrichedPost.author,
+    comments: enrichedPost.comments.map(c => ({
+      id: c.id,
+      author: c.author,
+      content: c.content.substring(0, 50) + '...'
+    }))
+  }, null, 2));
+  
+  // Add error boundary for author fallback
+  const authorName = enrichedPost.author?.name || 'Unknown Author';
+  const authorImage = enrichedPost.author?.image || '';
+  
   return (
     <div className="container mx-auto px-4 py-8">
       <Link href="/" className="text-sm text-muted-foreground hover:underline mb-6 inline-block">
@@ -56,19 +72,19 @@ export default async function PostPage({ params }: PostPageProps) {
       <Card className="mb-8">
         <CardHeader className="flex flex-row items-center gap-4">
           <Avatar>
-            <AvatarImage src={enrichedPost.author.image} alt={enrichedPost.author.name} />
+            <AvatarImage src={authorImage} alt={authorName} />
             <AvatarFallback>
-              {enrichedPost.author.name.substring(0, 2).toUpperCase()}
+              {authorName.substring(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
             <h1 className="text-2xl font-bold" id="post-title">{enrichedPost.title}</h1>
             <Link 
-              href={`/users/${enrichedPost.author.id}`} 
+              href={`/users/${enrichedPost.author?.id}`} 
               className="text-sm text-muted-foreground hover:underline"
-              aria-label={`View ${enrichedPost.author.name}'s profile`}
+              aria-label={`View ${authorName}'s profile`}
             >
-              by {enrichedPost.author.name}
+              by {authorName}
             </Link>
             <time className="text-xs text-muted-foreground" dateTime={enrichedPost.timestamp}>
               {new Date(enrichedPost.timestamp).toLocaleString()}
