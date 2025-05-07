@@ -21,9 +21,10 @@ type ApiResponse<T> = {
 type User = {
   _id: string;
   username: string;
+  email: string;
+  bio: string;
   profile_picture_url: string;
-  bio?: string;
-  email?: string;
+  join_date: string;
 };
 
 type Comment = {
@@ -31,14 +32,13 @@ type Comment = {
   post_id: string;
   user_id: string;
   content: string;
-  created_at: string;
 };
 
 type Post = {
   _id: string;
-  content: string;
   user_id: string;
-  created_at: string;
+  title: string;
+  content: string;
   media_urls?: string[];
   post_type?: string;
   like_count?: number;
@@ -76,7 +76,7 @@ export default async function Home() {
   // Format posts to match what our component expects
   const formattedPosts = posts.map(post => ({
     id: post._id,
-    title: post.post_type || 'Post', // Use post_type as title or default to 'Post'
+    title: post.title || 'Post', // Use post_type as title or default to 'Post'
     content: post.content,
     author: {
       id: post.user_id,
@@ -84,7 +84,7 @@ export default async function Home() {
       image: userMap[post.user_id]?.profile_picture_url || ''
     },
     commentCount: post.comment_count || commentCountByPost[post._id] || 0,
-    timestamp: post.created_at
+    timestamp: post.created_at || new Date().toISOString(),
   }));
   
   return (

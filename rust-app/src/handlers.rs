@@ -314,17 +314,36 @@ fn generate_random_users(count: usize) -> Vec<mongodb::bson::Document> {
 // Helper function to generate random posts with enhanced details
 fn generate_random_posts(user_ids: &[String], count: usize) -> Vec<mongodb::bson::Document> {
     let mut rng = rand::thread_rng();
-    let content_templates = vec![
-        "Just discovered something amazing about {}! 🤯",
-        "My thoughts on the future of {} 🚀",
-        "Why {} is changing everything 🌟",
-        "The untold story of {} 📖",
-        "10 things you didn't know about {} 🤔",
-        "How {} is shaping our future 🌍",
-        "The evolution of {} - a thread 🧵",
-        "Behind the scenes of {} 🎬",
-        "My journey with {} continues! 🛣️",
-        "Revolutionary new approach to {} 💡",
+        let content_templates = vec![
+        "Exploring the transformative power of {} and how it is reshaping industries, driving innovation, and creating new opportunities for growth and development. From its origins to its current applications, this post dives deep into the impact of {} on our world.",
+        "The future of {} is here, and it's more exciting than ever. In this post, we examine the groundbreaking advancements in {} and their potential to revolutionize the way we live, work, and interact with technology.",
+        "What makes {} such a game-changer? This post uncovers the key innovations, challenges, and opportunities that {} brings to the table, and why it is set to redefine the future of technology.",
+        "A comprehensive look at the evolution of {} and its journey from a niche concept to a mainstream phenomenon. Discover the stories, breakthroughs, and visionaries behind {} and its role in shaping the future.",
+        "10 reasons why {} is not just a buzzword but a transformative force that is driving change across industries. This post explores the practical applications, benefits, and future potential of {}.",
+        "How {} is paving the way for a more sustainable, efficient, and connected world. This post delves into the innovations and ideas that are making {} a cornerstone of modern technology.",
+        "The untold story of {}: from its humble beginnings to its current status as a revolutionary technology. This post highlights the milestones, challenges, and future prospects of {}.",
+        "Behind the scenes of {}: a closer look at the people, ideas, and innovations that are driving its success. This post offers an insider's perspective on the world of {}.",
+        "My personal journey with {}: the lessons learned, the challenges faced, and the incredible potential that {} holds for the future. This post is a reflection on the transformative power of {}.",
+        "Revolutionizing the world with {}: an in-depth exploration of the technologies, ideas, and innovations that are making {} a driving force in the modern era.",
+        "The intersection of {} and everyday life: how this technology is quietly influencing the way we work, communicate, and solve problems. This post examines the subtle yet profound impact of {}.",
+        "The challenges and opportunities of {}: a balanced look at the hurdles that need to be overcome and the immense potential that lies ahead for this groundbreaking technology.",
+        "How {} is enabling new possibilities in fields like healthcare, education, and entertainment. This post explores the real-world applications of {} and their impact on society.",
+        "The role of {} in the global economy: how this technology is creating new markets, disrupting traditional industries, and driving economic growth worldwide.",
+        "A visionary look at the future of {}: what lies ahead for this technology, and how it could shape the next decade of innovation and progress.",
+    ];
+
+    let mut rng = rand::thread_rng();
+    let titles = vec![
+        "The Future of AI",
+        "Blockchain Revolution",
+        "Sustainable Living",
+        "Digital Artistry",
+        "Remote Work Culture",
+        "Space Exploration",
+        "Virtual Reality Experiences",
+        "Renewable Energy Solutions",
+        "Quantum Computing Breakthroughs",
+        "Robotics in Everyday Life",
     ];
 
     let topics = vec![
@@ -348,6 +367,7 @@ fn generate_random_posts(user_ids: &[String], count: usize) -> Vec<mongodb::bson
         let template = content_templates.choose(&mut rng).unwrap();
         let topic = topics.choose(&mut rng).unwrap();
         let content = template.replace("{}", topic);
+        let tile = titles.choose(&mut rng).unwrap();
         
         let post_type = post_types.choose(&mut rng).unwrap();
         let media_urls = match post_type {
@@ -361,6 +381,7 @@ fn generate_random_posts(user_ids: &[String], count: usize) -> Vec<mongodb::bson
         posts.push(doc! {
             "_id": &post_id,
             "user_id": user_id,
+            "title": title,
             "content": &content,
             "media_urls": &media_urls,
             "post_type": match post_type {
