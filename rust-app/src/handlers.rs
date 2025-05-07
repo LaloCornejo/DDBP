@@ -367,7 +367,7 @@ fn generate_random_posts(user_ids: &[String], count: usize) -> Vec<mongodb::bson
         let template = content_templates.choose(&mut rng).unwrap();
         let topic = topics.choose(&mut rng).unwrap();
         let content = template.replace("{}", topic);
-        let tile = titles.choose(&mut rng).unwrap();
+        let title = titles.choose(&mut rng).unwrap();
         
         let post_type = post_types.choose(&mut rng).unwrap();
         let media_urls = match post_type {
