@@ -307,12 +307,11 @@ fn generate_random_users(count: usize) -> Vec<mongodb::bson::Document> {
             "password_hash": format!("hashed_password_{}", number),
             "bio": bio,
             // Choose one of the following options:
-            
-            "profile_picture_url": format!("https://this-person-does-not-exist.xyz/new?gender={}&age={}", 
-                if rng.gen_bool(0.5) { "male" } else { "female" },
-                rng.gen_range(20..60)
+
+            "profile_picture_url": format!("https://randomuser.me/api/?gender={}",
+                if rng.gen_bool(0.5) { "male" } else { "female" }
             ),
-        
+
             "join_date": current_time.to_rfc3339(),
             "follower_count": 0, // Will be updated after follows are generated
             "following_count": 0, // Will be updated after follows are generated
