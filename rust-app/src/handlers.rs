@@ -308,8 +308,9 @@ fn generate_random_users(count: usize) -> Vec<mongodb::bson::Document> {
             "bio": bio,
             // Choose one of the following options:
 
-            "profile_picture_url": format!("https://randomuser.me/api/?gender={}",
-                if rng.gen_bool(0.5) { "male" } else { "female" }
+            "profile_picture_url": format!("https://randomuser.me/api/portraits/{}/{}.jpg",
+                if rng.gen_bool(0.5) { "man" } else { "women" },
+                rng.gen_range(1..1000)
             ),
 
             "join_date": current_time.to_rfc3339(),

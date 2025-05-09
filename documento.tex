@@ -1,3 +1,4 @@
+
 \documentclass[12pt,letterpaper]{article}
 
 % Paquetes básicos
@@ -718,7 +719,7 @@ El sistema de Red Social Distribuida se construye sobre una arquitectura moderna
     \centering
     \begin{tikzpicture}[node distance=1.5cm]
         % Define the layers
-        \node[rectangle, minimum width=12cm, minimum height=1.5cm, fill=blue!20, draw] (ui) {Frontend (?)};
+        \node[rectangle, minimum width=12cm, minimum height=1.5cm, fill=blue!20, draw] (ui) {Frontend (NEXTJS)};
         
         \node[rectangle, minimum width=12cm, minimum height=1.5cm, fill=green!20, draw, below=0.5cm of ui] (api) {API Gateway (Actix Web)};
         
@@ -726,7 +727,7 @@ El sistema de Red Social Distribuida se construye sobre una arquitectura moderna
         
         \node[rectangle, minimum width=12cm, minimum height=1.5cm, fill=red!20, draw, below=0.5cm of app] (db) {Base de Datos (MongoDB ReplicaSet)};
         
-        \node[rectangle, minimum width=12cm, minimum height=1.5cm, fill=gray!20, draw, below=0.5cm of db] (infra) {Infraestructura (Podman/Docker Compose)};
+        \node[rectangle, minimum width=12cm, minimum height=1.5cm, fill=gray!20, draw, below=0.5cm of db] (infra) {Infraestructura (Podman/Podman Compose)};
         
         % Connect the layers
         \draw[-stealth, thick] (ui) -- (api);
@@ -760,11 +761,6 @@ El sistema de Red Social Distribuida se construye sobre una arquitectura moderna
     \item \textbf{Yaak}: Herramiento para testear las APIs de Actix Web, permitiendo visualizar y manejar las peticiones y respuestas de manera sencilla.
 
 \end{itemize}
-
-\subsection{Estructura de la Aplicación Rust}
-\subsubsection{API Endpoints y Funcionalidades}
-\subsubsection{Manejo de Errores y Responses}
-\subsubsection{Modelos de Datos}
 
 % 3. Modelos de Datos
 \section{Modelos de Datos}
