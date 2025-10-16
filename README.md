@@ -2,7 +2,7 @@
 
 A high-performance, distributed social media platform built with Rust and MongoDB ReplicaSet, featuring modern architecture, robust error handling, and horizontal scalability.
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 The system implements a distributed architecture using MongoDB ReplicaSet for high availability and data consistency:
 
@@ -31,7 +31,7 @@ The system implements a distributed architecture using MongoDB ReplicaSet for hi
                 └─────────────┘
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -83,7 +83,7 @@ The system implements a distributed architecture using MongoDB ReplicaSet for hi
 ./api_tests.sh
 ```
 
-## 📊 Database Schema
+## Database Schema
 
 ### Users Collection
 ```javascript
@@ -123,7 +123,7 @@ The system implements a distributed architecture using MongoDB ReplicaSet for hi
 }
 ```
 
-## 🔌 API Endpoints
+## API Endpoints
 
 ### User Operations
 - `POST /create_user` - Create new user account
@@ -141,7 +141,7 @@ The system implements a distributed architecture using MongoDB ReplicaSet for hi
 - `POST /test/populate` - Populate database with test data
 - `POST /test/clean` - Clean test data
 
-## ⚙️ Configuration Features
+## Configuration Features
 
 ### High Availability
 - **ReplicaSet with 3 nodes** ensuring automatic failover
@@ -169,7 +169,7 @@ client_options.retry_reads = Some(true);
 client_options.retry_writes = Some(true);
 ```
 
-## 🔒 Security Features
+## Security Features
 
 - **Keyfile authentication** for ReplicaSet internal communication
 - **Role-based access control (RBAC)** for database operations
@@ -177,7 +177,7 @@ client_options.retry_writes = Some(true);
 - **Password hashing** for user authentication
 - **Input validation** on all API endpoints
 
-## 📈 Performance Optimizations
+## Performance Optimizations
 
 ### Database Indexing
 - Unique indexes on `username` and `email`
@@ -190,7 +190,7 @@ client_options.retry_writes = Some(true);
 - Embedded profile information
 - Optimized for read-heavy workloads
 
-## 🧪 Testing
+## Testing
 
 ### API Testing
 ```bash
@@ -210,7 +210,7 @@ curl -X POST http://localhost:8080/test/populate \
 curl -X POST http://localhost:8080/test/clean
 ```
 
-## 📦 Project Structure
+## Project Structure
 
 ```
 DDBP/
@@ -234,7 +234,7 @@ DDBP/
 └── api_tests.sh          # API testing script
 ```
 
-## 🔧 Development
+## Development
 
 ### Building the Backend
 ```bash
@@ -258,7 +258,7 @@ cargo clippy
 pnpm lint
 ```
 
-## 📊 Monitoring and Health Checks
+## Monitoring and Health Checks
 
 ### Application Health
 ```bash
@@ -274,7 +274,7 @@ mongosh --host localhost:27017 -u admin -p password
 rs.status()
 ```
 
-## 🚀 Deployment
+## Deployment
 
 ### Production Considerations
 - Configure proper MongoDB authentication
@@ -290,19 +290,11 @@ RUST_LOG=info
 PORT=8080
 ```
 
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
+## License
 
 This project is part of an academic assignment for DDBP (Distributed Database Systems) course.
 
-## 👥 Authors
+## Authors
 
 - **Jesus Eduardo Cornejo Clavel** - Student
 - **Eduardo Cornejo-Velazquez** - Professor
